@@ -43,3 +43,9 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+chrome-linux64/
+chrome-linux64.zip
+chrome-linux64.zip.1
+chromedriver-linux64/
+chromedriver-linux64.zip
