@@ -1,0 +1,48 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "dejtingapp",
+      "request": "launch",
+      "type": "dart"
+    },
+    {
+      "name": "dejtingapp (profile mode)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "profile"
+    },
+    {
+      "name": "dejtingapp (release mode)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "release"
+    },
+    {
+      "name": "dejtingapp (debug with Flutter Inspector)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "debug",
+      "toolArgs": ["--start-paused"],
+      "args": ["--enable-flutter-inspector"]
+    },
+    {
+      "name": "dejtingapp (web - Chrome)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "debug",
+      "deviceId": "chrome"
+    },
+    {
+      "name": "dejtingapp (debug with Flutter Inspector - Chrome)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "debug",
+      "toolArgs": ["--start-paused"],
+      "deviceId": "chrome"
+    }
+  ]
+}

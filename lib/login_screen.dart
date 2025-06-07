@@ -26,8 +26,8 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     final url = Uri.parse(
-      'https://your-backend-api.com/auth/login',
-    ); // Replace with your backend URL
+      'http://localhost:8080/api/auth/login',
+    ); // Updated to use YARP gateway and correct route
     final response = await http.post(
       url,
       headers: {'Content-Type': 'application/json'},
@@ -80,7 +80,16 @@ class _LoginScreenState extends State<LoginScreen> {
               obscureText: true,
             ),
             const SizedBox(height: 20),
-            ElevatedButton(onPressed: _login, child: const Text('Login')),
+            if (_errorMessage != null) ...[
+              const SizedBox(height: 12),
+              Text(_errorMessage!, style: TextStyle(color: Colors.red)),
+            ],
+            ElevatedButton(
+              onPressed: _isLoading ? null : _login,
+              child: _isLoading
+                  ? const CircularProgressIndicator()
+                  : const Text('Login'),
+            ),
             TextButton(
               onPressed: () {
                 Navigator.push(
