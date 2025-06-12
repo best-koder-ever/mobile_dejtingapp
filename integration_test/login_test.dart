@@ -14,7 +14,9 @@ void main() {
     final passwordField = find.widgetWithText(TextField, 'Password');
     final loginButton = find.widgetWithText(ElevatedButton, 'Login');
     final errorText = find.textContaining('Invalid credentials');
-    final homeScreenIndicator = find.text('Home'); // Adjust if HomeScreen has a unique widget
+    final homeScreenIndicator = find.text(
+      'Home',
+    ); // Adjust if HomeScreen has a unique widget
 
     // Try login up to 3 times or until success
     bool loggedIn = false;
@@ -33,6 +35,10 @@ void main() {
         await tester.enterText(passwordField, 'TestUser1!');
       }
     }
-    expect(loggedIn, isTrue, reason: 'Should navigate to HomeScreen after successful login');
+    expect(
+      loggedIn,
+      isTrue,
+      reason: 'Should navigate to HomeScreen after successful login',
+    );
   });
 }

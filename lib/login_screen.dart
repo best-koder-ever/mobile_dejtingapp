@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'home_screen.dart';
 import 'register_screen.dart';
+import 'backend_url.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -26,8 +27,8 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     final url = Uri.parse(
-      'http://localhost:8080/api/auth/login',
-    ); // Updated to use YARP gateway and correct route
+      getBackendBaseUrl(port: 8080) + '/api/auth/login',
+    ); // Use 10.0.2.2 for Android emulator
     final response = await http.post(
       url,
       headers: {'Content-Type': 'application/json'},
@@ -47,6 +48,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
       // Save the JWT token securely
       await _storage.write(key: 'jwt', value: token);
+      await _storage.write(
+        key: 'email',
+        value: _emailController.text,
+      ); // Store email for later use
 
       // Navigate to the Home screen
       if (context.mounted) {
@@ -86,9 +91,10 @@ class _LoginScreenState extends State<LoginScreen> {
             ],
             ElevatedButton(
               onPressed: _isLoading ? null : _login,
-              child: _isLoading
-                  ? const CircularProgressIndicator()
-                  : const Text('Login'),
+              child:
+                  _isLoading
+                      ? const CircularProgressIndicator()
+                      : const Text('Login'),
             ),
             TextButton(
               onPressed: () {
