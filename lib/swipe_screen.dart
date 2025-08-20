@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
-import 'swipe_service_api.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'backend_url.dart';
+import 'api_services.dart';
+import 'models.dart';
 
 class SwipeScreen extends StatefulWidget {
   const SwipeScreen({super.key});
@@ -13,186 +10,338 @@ class SwipeScreen extends StatefulWidget {
 }
 
 class _SwipeScreenState extends State<SwipeScreen> {
-  final SwipeServiceApi api = SwipeServiceApi(
-    baseUrl: getBackendBaseUrl(port: 8080),
-  ); // Use 10.0.2.2 for Android emulator
-  final _storage = const FlutterSecureStorage();
-  String? _swipeResult;
-  int? userId;
-  int? targetUserId;
-  bool _loading = true;
-  List<dynamic> _usersToSwipe = [];
+  List<UserProfile> _profiles = [];
   int _currentIndex = 0;
-  Map<String, dynamic>? _currentTargetUser;
+  bool _loading = true;
+  String? _errorMessage;
+  bool _swiping = false;
 
   @override
   void initState() {
     super.initState();
-    _initUserIds();
+    _loadProfiles();
   }
 
-  Future<void> _initUserIds() async {
-    // Get email from secure storage (set at login)
-    String? email = await _storage.read(key: 'email');
-    if (email == null) {
-      setState(() {
-        _swipeResult = 'Error: Not logged in.';
-        _loading = false;
-      });
-      return;
-    }
-    // Fetch userId for this email from backend
-    final userResp = await http.get(
-      Uri.parse(getBackendBaseUrl(port: 8081) + '/api/users/by-email/$email'),
-    );
-    if (userResp.statusCode != 200) {
-      setState(() {
-        _swipeResult = 'Error: Could not fetch userId for $email';
-        _loading = false;
-      });
-      return;
-    }
-    final userJson = jsonDecode(userResp.body);
-    final int myUserId =
-        userJson['id'] is int
-            ? userJson['id']
-            : int.tryParse(userJson['id'].toString()) ?? 0;
-    // Fetch a target user (any user except self)
-    final allUsersResp = await http.get(
-      Uri.parse(getBackendBaseUrl(port: 8081) + '/api/users'),
-    );
-    if (allUsersResp.statusCode != 200) {
-      setState(() {
-        _swipeResult = 'Error: Could not fetch users list.';
-        _loading = false;
-      });
-      return;
-    }
-    final usersList = jsonDecode(allUsersResp.body) as List;
-    final filteredUsers = usersList.where((u) => u['id'] != myUserId).toList();
+  Future<void> _loadProfiles() async {
     setState(() {
-      userId = myUserId;
-      _usersToSwipe = filteredUsers;
-      _currentIndex = 0;
-      _currentTargetUser = _usersToSwipe.isNotEmpty ? _usersToSwipe[0] : null;
-      targetUserId =
-          _currentTargetUser != null
-              ? (_currentTargetUser!['id'] is int
-                  ? _currentTargetUser!['id']
-                  : int.tryParse(_currentTargetUser!['id'].toString()) ?? 0)
-              : null;
-      _loading = false;
-      if (targetUserId == null) _swipeResult = 'No other users to swipe on.';
+      _loading = true;
+      _errorMessage = null;
     });
+
+    try {
+      final profiles = await userApi.getAllProfiles();
+      final currentUserId = await userApi.getCurrentUserId();
+      setState(() {
+        _profiles = profiles.where((p) => p.userId != currentUserId).toList();
+        _currentIndex = 0;
+        _loading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Failed to load profiles: $e';
+        _loading = false;
+      });
+    }
   }
 
   Future<void> _swipe(bool isLike) async {
-    if (userId == null || targetUserId == null) {
-      setState(() {
-        _swipeResult = 'Error: User IDs not set.';
-      });
-      return;
-    }
+    if (_currentIndex >= _profiles.length || _swiping) return;
+
+    setState(() {
+      _swiping = true;
+    });
+
     try {
-      await api.recordSwipe(
-        userId: userId!,
-        targetUserId: targetUserId!,
+      final currentProfile = _profiles[_currentIndex];
+      final response = await swipeApi.recordSwipe(
+        targetUserId: currentProfile.userId,
         isLike: isLike,
       );
+
+      if (response.isMatch) {
+        _showMatchDialog(currentProfile);
+      }
+
       setState(() {
-        _swipeResult = isLike ? 'Liked!' : 'Disliked!';
         _currentIndex++;
-        if (_currentIndex < _usersToSwipe.length) {
-          _currentTargetUser = _usersToSwipe[_currentIndex];
-          targetUserId =
-              _currentTargetUser!['id'] is int
-                  ? _currentTargetUser!['id']
-                  : int.tryParse(_currentTargetUser!['id'].toString()) ?? 0;
-        } else {
-          _currentTargetUser = null;
-          targetUserId = null;
-          _swipeResult = 'No more users to swipe on.';
-        }
+        _swiping = false;
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(isLike ? 'Liked!' : 'Disliked!')));
+
+      // Load more profiles if we're running low
+      if (_currentIndex >= _profiles.length - 2) {
+        _loadMoreProfiles();
+      }
     } catch (e) {
       setState(() {
-        _swipeResult = 'Error: ${e.toString()}';
+        _errorMessage = 'Failed to record swipe: $e';
+        _swiping = false;
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
     }
+  }
+
+  Future<void> _loadMoreProfiles() async {
+    try {
+      final moreProfiles = await userApi.getAllProfiles();
+      final currentUserId = await userApi.getCurrentUserId();
+      setState(() {
+        _profiles.addAll(
+          moreProfiles
+              .where(
+                (p) =>
+                    p.userId != currentUserId &&
+                    !_profiles.any((existing) => existing.userId == p.userId),
+              )
+              .toList(),
+        );
+      });
+    } catch (e) {
+      // Ignore errors when loading more profiles
+    }
+  }
+
+  void _showMatchDialog(UserProfile matchedProfile) {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('🎉 It\'s a Match!'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircleAvatar(
+                  radius: 40,
+                  backgroundImage:
+                      matchedProfile.photoUrls.isNotEmpty
+                          ? NetworkImage(matchedProfile.photoUrls.first)
+                          : null,
+                  child:
+                      matchedProfile.photoUrls.isEmpty
+                          ? const Icon(Icons.person, size: 40)
+                          : null,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'You matched with ${matchedProfile.firstName}!',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 18),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Keep Swiping'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  // Navigate to matches screen
+                  DefaultTabController.of(context).animateTo(2);
+                },
+                child: const Text('View Matches'),
+              ),
+            ],
+          ),
+    );
+  }
+
+  Widget _buildProfileCard(UserProfile profile) {
+    return Card(
+      elevation: 8,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: Stack(
+          children: [
+            // Background image
+            Container(
+              width: double.infinity,
+              height: double.infinity,
+              decoration: BoxDecoration(
+                image:
+                    profile.photoUrls.isNotEmpty
+                        ? DecorationImage(
+                          image: NetworkImage(profile.photoUrls.first),
+                          fit: BoxFit.cover,
+                        )
+                        : null,
+                color: profile.photoUrls.isEmpty ? Colors.grey[300] : null,
+              ),
+              child:
+                  profile.photoUrls.isEmpty
+                      ? const Center(
+                        child: Icon(
+                          Icons.person,
+                          size: 100,
+                          color: Colors.grey,
+                        ),
+                      )
+                      : null,
+            ),
+            // Gradient overlay
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Colors.transparent,
+                    Colors.black.withOpacity(0.7),
+                  ],
+                ),
+              ),
+            ),
+            // Profile info
+            Positioned(
+              bottom: 20,
+              left: 20,
+              right: 20,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${profile.firstName}, ${profile.age}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  if (profile.bio?.isNotEmpty == true) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      profile.bio!,
+                      style: const TextStyle(color: Colors.white, fontSize: 16),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                  if (profile.interests.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      children:
+                          profile.interests.take(3).map((interest) {
+                            return Chip(
+                              label: Text(interest),
+                              backgroundColor: Colors.white.withOpacity(0.9),
+                              labelStyle: const TextStyle(fontSize: 12),
+                            );
+                          }).toList(),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Browse/Swipe')),
-      body: Center(
-        child:
-            _loading
-                ? const CircularProgressIndicator()
-                : _currentTargetUser == null
-                ? Text(_swipeResult ?? 'No users to swipe on.')
-                : Column(
+      appBar: AppBar(
+        title: const Text('Discover'),
+        backgroundColor: Colors.pink,
+        foregroundColor: Colors.white,
+      ),
+      body:
+          _loading
+              ? const Center(child: CircularProgressIndicator())
+              : _errorMessage != null
+              ? Center(
+                child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Card(
-                      elevation: 4,
-                      child: Padding(
-                        padding: const EdgeInsets.all(24.0),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              _currentTargetUser!['name'] ??
-                                  _currentTargetUser!['email'] ??
-                                  'Unknown',
-                              style: const TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            if (_currentTargetUser!['email'] != null)
-                              Text(
-                                _currentTargetUser!['email'],
-                                style: const TextStyle(fontSize: 16),
-                              ),
-                            // Add more fields as needed
-                          ],
-                        ),
-                      ),
+                    Text(
+                      _errorMessage!,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 16),
                     ),
-                    if (_swipeResult != null) ...[
-                      Text(_swipeResult!, key: Key('swipeResult')),
-                      const SizedBox(height: 16),
-                    ],
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        ElevatedButton(
-                          onPressed:
-                              (userId != null && targetUserId != null)
-                                  ? () => _swipe(false)
-                                  : null,
-                          child: const Text('Swipe Left'),
-                        ),
-                        const SizedBox(width: 20),
-                        ElevatedButton(
-                          onPressed:
-                              (userId != null && targetUserId != null)
-                                  ? () => _swipe(true)
-                                  : null,
-                          child: const Text('Swipe Right'),
-                        ),
-                      ],
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: _loadProfiles,
+                      child: const Text('Retry'),
                     ),
                   ],
                 ),
-      ),
+              )
+              : _currentIndex >= _profiles.length
+              ? const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.favorite, size: 64, color: Colors.pink),
+                    SizedBox(height: 20),
+                    Text(
+                      'No more profiles!',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      'Check back later for new matches',
+                      style: TextStyle(fontSize: 16, color: Colors.grey),
+                    ),
+                  ],
+                ),
+              )
+              : Stack(
+                children: [
+                  // Profile cards stack
+                  for (
+                    int i = _currentIndex;
+                    i < _currentIndex + 2 && i < _profiles.length;
+                    i++
+                  )
+                    Positioned(
+                      top: (i - _currentIndex) * 10.0,
+                      left: (i - _currentIndex) * 5.0,
+                      right: (i - _currentIndex) * 5.0,
+                      bottom: 120,
+                      child: _buildProfileCard(_profiles[i]),
+                    ),
+                  // Action buttons
+                  Positioned(
+                    bottom: 40,
+                    left: 0,
+                    right: 0,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        // Pass button
+                        FloatingActionButton(
+                          onPressed: _swiping ? null : () => _swipe(false),
+                          backgroundColor: Colors.red,
+                          heroTag: "pass",
+                          child: const Icon(Icons.close, color: Colors.white),
+                        ),
+                        // Like button
+                        FloatingActionButton(
+                          onPressed: _swiping ? null : () => _swipe(true),
+                          backgroundColor: Colors.green,
+                          heroTag: "like",
+                          child: const Icon(
+                            Icons.favorite,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Loading overlay
+                  if (_swiping)
+                    Container(
+                      color: Colors.black.withOpacity(0.3),
+                      child: const Center(child: CircularProgressIndicator()),
+                    ),
+                ],
+              ),
     );
   }
 }
