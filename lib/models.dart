@@ -67,6 +67,12 @@ class UserProfile {
   final String? lifestyle;
   final String? relationshipGoals;
   final bool isPremium;
+  final String? gender;
+  final String? preferences;
+  final String? drinking;
+  final String? smoking;
+  final String? workout;
+  final List<String> languages;
 
   UserProfile({
     this.id,
@@ -91,6 +97,12 @@ class UserProfile {
     this.lifestyle,
     this.relationshipGoals,
     this.isPremium = false,
+    this.gender,
+    this.preferences,
+    this.drinking,
+    this.smoking,
+    this.workout,
+    this.languages = const [],
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
@@ -122,6 +134,13 @@ class UserProfile {
       lifestyle: json['lifestyle'],
       relationshipGoals: json['relationshipGoals'],
       isPremium: json['isPremium'] ?? false,
+      gender: json['gender'],
+      preferences: json['preferences'],
+      drinking: json['drinking'],
+      smoking: json['smoking'],
+      workout: json['workout'],
+      languages:
+          json['languages'] != null ? List<String>.from(json['languages']) : [],
     );
   }
 
@@ -149,6 +168,12 @@ class UserProfile {
       'lifestyle': lifestyle,
       'relationshipGoals': relationshipGoals,
       'isPremium': isPremium,
+      'gender': gender,
+      'preferences': preferences,
+      'drinking': drinking,
+      'smoking': smoking,
+      'workout': workout,
+      'languages': languages,
     };
   }
 
