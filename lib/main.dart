@@ -1,23 +1,60 @@
 import 'package:flutter/material.dart';
+import 'main_app.dart';
+import 'screens/auth_screens.dart';
 import 'tinder_like_profile_screen.dart';
+import 'services/api_service.dart';
 
 void main() {
-  runApp(MyApp());
+  runApp(const DatingApp());
 }
 
-class MyApp extends StatelessWidget {
+class DatingApp extends StatelessWidget {
+  const DatingApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Tinder-Like Enhanced Profile Demo',
+      title: 'DatingApp',
       theme: ThemeData(
         primarySwatch: Colors.pink,
         useMaterial3: true,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.pink,
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.pink,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(25),
+            ),
+          ),
+        ),
       ),
-      home: const TinderLikeProfileScreen(
-        isFirstTime: true,
-      ),
+      initialRoute: _getInitialRoute(),
+      routes: {
+        '/login': (context) => const LoginScreen(),
+        '/register': (context) => const RegisterScreen(),
+        '/home': (context) => const MainApp(),
+        '/profile':
+            (context) => const TinderLikeProfileScreen(isFirstTime: false),
+      },
+      home: _getInitialScreen(),
     );
+  }
+
+  String _getInitialRoute() {
+    // Check if user is logged in
+    final userId = AppState().userId;
+    return userId != null ? '/home' : '/login';
+  }
+
+  Widget _getInitialScreen() {
+    // Check if user is logged in
+    final userId = AppState().userId;
+    return userId != null ? const MainApp() : const LoginScreen();
   }
 }
 
