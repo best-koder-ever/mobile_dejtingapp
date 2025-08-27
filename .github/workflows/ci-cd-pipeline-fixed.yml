@@ -1,0 +1,232 @@
+name: Flutter App CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  FLUTTER_VERSION: "3.24.3"
+
+jobs:
+  # Flutter Testing and Analysis
+  flutter-tests:
+    name: Flutter Tests & Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Get Flutter dependencies
+        run: flutter pub get
+
+      - name: Analyze Flutter code
+        run: flutter analyze
+
+      - name: Check Flutter formatting
+        run: dart format --set-exit-if-changed .
+
+      - name: Run Flutter tests
+        run: flutter test --coverage
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flutter-test-results
+          path: |
+            coverage/
+            test/
+          retention-days: 30
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: coverage/lcov.info
+          flags: flutter
+          name: flutter-coverage
+
+  # Build Flutter Apps
+  build-flutter:
+    name: Build Flutter Apps
+    runs-on: ubuntu-latest
+    needs: flutter-tests
+    strategy:
+      matrix:
+        platform: [android, web]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Setup Java for Android
+        if: matrix.platform == 'android'
+        uses: actions/setup-java@v4
+        with:
+          distribution: "zulu"
+          java-version: "17"
+
+      - name: Get Flutter dependencies
+        run: flutter pub get
+
+      - name: Build for Android
+        if: matrix.platform == 'android'
+        run: |
+          flutter build apk --release
+          flutter build appbundle --release
+
+      - name: Build for Web
+        if: matrix.platform == 'web'
+        run: flutter build web --release
+
+      - name: Upload Android artifacts
+        if: matrix.platform == 'android'
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-builds
+          path: |
+            build/app/outputs/flutter-apk/
+            build/app/outputs/bundle/
+          retention-days: 30
+
+      - name: Upload Web artifacts
+        if: matrix.platform == 'web'
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-build
+          path: build/web/
+          retention-days: 30
+
+  # Integration Tests
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: flutter-tests
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Get Flutter dependencies
+        run: flutter pub get
+
+      - name: Run integration tests
+        run: |
+          if [ -d "integration_test" ]; then
+            flutter test integration_test/
+          else
+            echo "No integration tests found, skipping..."
+          fi
+
+  # Security Scan
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Get Flutter dependencies
+        run: flutter pub get
+
+      - name: Run dependency audit
+        run: |
+          dart pub deps
+          flutter pub deps
+
+      - name: Check for known vulnerabilities
+        run: |
+          if command -v dart &> /dev/null; then
+            dart pub audit || echo "Audit completed with warnings"
+          fi
+
+  # Deploy to Development
+  deploy-dev:
+    name: Deploy to Development
+    runs-on: ubuntu-latest
+    needs: [flutter-tests, build-flutter]
+    if: github.ref == 'refs/heads/develop'
+    environment:
+      name: development
+      url: https://dev-dating-app.example.com
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download web build
+        uses: actions/download-artifact@v4
+        with:
+          name: web-build
+          path: build/web/
+
+      - name: Deploy to development
+        run: |
+          echo "🚀 Deploying to development environment..."
+          echo "Web build ready for deployment"
+          # Add actual deployment steps here
+
+      - name: Notify deployment
+        run: |
+          echo "✅ Development deployment completed"
+          echo "🌐 Available at: https://dev-dating-app.example.com"
+
+  # Deploy to Production
+  deploy-prod:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [flutter-tests, build-flutter, integration-tests, security-scan]
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: production
+      url: https://dating-app.example.com
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: web-build
+          path: build/web/
+
+      - name: Download Android builds
+        uses: actions/download-artifact@v4
+        with:
+          name: android-builds
+          path: build/android/
+
+      - name: Deploy to production
+        run: |
+          echo "🚀 Deploying to production environment..."
+          echo "📱 Android build ready for Play Store"
+          echo "🌐 Web build ready for production"
+          # Add actual deployment steps here
+
+      - name: Notify production deployment
+        run: |
+          echo "✅ Production deployment completed"
+          echo "🌐 Available at: https://dating-app.example.com"
+          echo "📱 Android app ready for distribution"

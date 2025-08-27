@@ -2,18 +2,18 @@ name: "✅ Working Flutter CI"
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   test:
     name: "Flutter Tests"
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.1'
+          flutter-version: "3.24.1"
       - run: flutter pub get
       - run: flutter test --no-sound-null-safety || true
       - run: echo "✅ Pipeline completed successfully!"
