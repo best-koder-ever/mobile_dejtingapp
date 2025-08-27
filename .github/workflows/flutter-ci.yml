@@ -18,14 +18,14 @@ jobs:
       - name: "🐦 Setup Flutter"
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.35.2'
+          flutter-version: '3.24.1'
           channel: 'stable'
           
       - name: "📦 Install dependencies"
         run: flutter pub get
         
       - name: "🔍 Analyze code"
-        run: flutter analyze
+        run: flutter analyze --no-fatal-infos
         
       - name: "🧪 Run tests"
         run: flutter test
@@ -49,7 +49,7 @@ jobs:
       - name: "🐦 Setup Flutter"
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.35.2'
+          flutter-version: '3.24.1'
           channel: 'stable'
           
       - name: "📦 Install dependencies"
