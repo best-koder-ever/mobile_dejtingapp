@@ -81,8 +81,24 @@ show_repo_status() {
     echo ""
     
     echo "🔓 Repository Visibility:"
-    gh repo list best-koder-ever --limit 10 --json name,visibility | jq -r '.[] | "\(.name): \(.visibility)"' | grep -E "(mobile_dejtingapp|auth-service|matchmaking|dating)"
+    gh repo list best-koder-ever --limit 15 --json name,visibility | jq -r '.[] | "\(.name): \(.visibility)"' | grep -E "(mobile_dejtingapp|auth-service|MatchmakingService|photo-service|swipe-service|UserService|TestDataGenerator|dejting-yarp|dating)"
     echo ""
+}
+
+# Function to check all .NET services GitHub Actions
+show_dotnet_services_status() {
+    echo "🏗️ .NET Services GitHub Actions Status:"
+    echo "========================================"
+    for repo in auth-service MatchmakingService photo-service swipe-service UserService TestDataGenerator dejting-yarp; do
+        echo "📋 $repo:"
+        STATUS=$(gh run list --repo best-koder-ever/$repo --limit 1 --json status,conclusion,name --jq '.[0] | "\(.status): \(.conclusion // "running") - \(.name)"' 2>/dev/null)
+        if [ -n "$STATUS" ]; then
+            echo "   $STATUS"
+        else
+            echo "   ❌ No runs or access issue"
+        fi
+        echo ""
+    done
 }
 
 # Main menu
@@ -105,26 +121,31 @@ case "${1:-menu}" in
     "repo"|"r")
         show_repo_status
         ;;
+    "dotnet"|"services"|"d")
+        show_dotnet_services_status
+        ;;
     "all"|"a")
         show_repo_status
         show_latest_status
+        show_dotnet_services_status
         show_monitoring_status
         ;;
     *)
         echo "Usage: $0 [command]"
         echo ""
         echo "Commands:"
-        echo "  status|s     - Show latest workflow status"
+        echo "  status|s     - Show latest workflow status (Flutter)"
         echo "  success|ok   - Show latest successful run"
         echo "  failure|f    - Show latest failed run with logs"
         echo "  logs|l       - Show logs of latest run"
         echo "  monitoring|m - Show monitoring & services status" 
         echo "  repo|r       - Show repository status"
+        echo "  dotnet|d     - Show all .NET services GitHub Actions"
         echo "  all|a        - Show everything"
         echo ""
         echo "Examples:"
         echo "  $0 status"
-        echo "  $0 logs"
+        echo "  $0 dotnet"
         echo "  $0 all"
         ;;
 esac
