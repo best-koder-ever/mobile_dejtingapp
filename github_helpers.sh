@@ -89,7 +89,7 @@ show_repo_status() {
 show_dotnet_services_status() {
     echo "🏗️ .NET Services GitHub Actions Status:"
     echo "========================================"
-    for repo in auth-service MatchmakingService photo-service swipe-service UserService TestDataGenerator dejting-yarp; do
+    for repo in auth-service matchmaking-service photo-service swipe-service UserService TestDataGenerator dejting-yarp; do
         echo "📋 $repo:"
         STATUS=$(gh run list --repo best-koder-ever/$repo --limit 1 --json status,conclusion,name --jq '.[0] | "\(.status): \(.conclusion // "running") - \(.name)"' 2>/dev/null)
         if [ -n "$STATUS" ]; then
@@ -99,6 +99,61 @@ show_dotnet_services_status() {
         fi
         echo ""
     done
+}
+
+# Function to trigger professional CI/CD workflow
+trigger_professional_workflow() {
+    echo "🚀 Triggering Professional Dating App CI/CD..."
+    echo "================================================"
+    
+    cd /home/m/development/DatingApp 2>/dev/null || {
+        echo "❌ DatingApp directory not found"
+        return 1
+    }
+    
+    echo "📋 Triggering main CI/CD pipeline..."
+    gh workflow run "Professional Dating App CI/CD" --ref main || echo "   ⚠️  Failed to trigger main workflow"
+    
+    echo ""
+    echo "✅ Professional pipeline triggered!"
+    echo "🌐 Main Pipeline: https://github.com/best-koder-ever/DatingApp-Config/actions"
+    echo "📱 Flutter App: https://github.com/best-koder-ever/mobile_dejtingapp/actions"
+    echo ""
+    echo "💡 Use './github_helpers.sh status' to monitor progress"
+    echo ""
+}
+
+# Function to trigger all .NET service workflows (legacy - kept for backward compatibility)
+trigger_all_dotnet_workflows() {
+    echo "🚀 Triggering GitHub Actions for all .NET services..."
+    echo "======================================================"
+    echo "⚠️  Note: Individual service workflows are legacy."
+    echo "🎯 Consider using 'trigger-pro' for the unified professional pipeline."
+    echo ""
+    
+    services=("auth-service" "matchmaking-service" "photo-service" "swipe-service" "UserService" "TestDataGenerator" "dejting-yarp")
+    workflows=("🔐 Auth Service CI/CD" "💕 Matchmaking Service CI/CD" "📸 Photo Service CI/CD" "👆 Swipe Service CI/CD" "👤 User Service CI/CD" "🔄 Test Data Generator CI/CD" "🌐 YARP Gateway CI/CD")
+    
+    base_dir="/home/m/development/DatingApp"
+    
+    for i in "${!services[@]}"; do
+        service="${services[$i]}"
+        workflow="${workflows[$i]}"
+        
+        echo "📋 Triggering $service..."
+        (cd "$base_dir/$service" && gh workflow run "$workflow" --ref main 2>/dev/null) || echo "   ⚠️  Failed to trigger $service"
+    done
+    
+    echo ""
+    echo "✅ All individual workflows triggered! Check GitHub for results:"
+    echo "🌐 https://github.com/best-koder-ever/auth-service/actions"
+    echo "🌐 https://github.com/best-koder-ever/matchmaking-service/actions"
+    echo "🌐 https://github.com/best-koder-ever/photo-service/actions"
+    echo "🌐 https://github.com/best-koder-ever/swipe-service/actions"
+    echo "🌐 https://github.com/best-koder-ever/UserService/actions"
+    echo "🌐 https://github.com/best-koder-ever/TestDataGenerator/actions"
+    echo "🌐 https://github.com/best-koder-ever/dejting-yarp/actions"
+    echo ""
 }
 
 # Main menu
@@ -124,6 +179,12 @@ case "${1:-menu}" in
     "dotnet"|"services"|"d")
         show_dotnet_services_status
         ;;
+    "trigger"|"t")
+        trigger_all_dotnet_workflows
+        ;;
+    "trigger-pro"|"pro"|"tp")
+        trigger_professional_workflow
+        ;;
     "all"|"a")
         show_repo_status
         show_latest_status
@@ -133,19 +194,25 @@ case "${1:-menu}" in
     *)
         echo "Usage: $0 [command]"
         echo ""
-        echo "Commands:"
-        echo "  status|s     - Show latest workflow status (Flutter)"
+        echo "🎯 Primary Commands:"
+        echo "  trigger-pro|pro - Trigger professional CI/CD pipeline (RECOMMENDED)"
+        echo "  status|s        - Show latest workflow status"
+        echo "  all|a          - Show everything"
+        echo ""
+        echo "📋 Detailed Commands:"
         echo "  success|ok   - Show latest successful run"
         echo "  failure|f    - Show latest failed run with logs"
         echo "  logs|l       - Show logs of latest run"
         echo "  monitoring|m - Show monitoring & services status" 
         echo "  repo|r       - Show repository status"
         echo "  dotnet|d     - Show all .NET services GitHub Actions"
-        echo "  all|a        - Show everything"
+        echo "  trigger|t    - Trigger individual .NET service workflows (legacy)"
         echo ""
-        echo "Examples:"
-        echo "  $0 status"
-        echo "  $0 dotnet"
-        echo "  $0 all"
+        echo "🚀 Professional Examples:"
+        echo "  $0 pro          # Trigger main professional pipeline"
+        echo "  $0 status       # Check pipeline status"
+        echo "  $0 all          # Full status overview"
+        echo ""
+        echo "💡 For daily development: Use 'pro' command for professional CI/CD"
         ;;
 esac
