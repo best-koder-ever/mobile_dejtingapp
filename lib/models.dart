@@ -126,10 +126,9 @@ class UserProfile {
           json['photoUrls'] != null ? List<String>.from(json['photoUrls']) : [],
       isVerified: json['isVerified'] ?? false,
       isOnline: json['isOnline'] ?? false,
-      lastActiveAt:
-          json['lastActiveAt'] != null
-              ? DateTime.parse(json['lastActiveAt'])
-              : null,
+      lastActiveAt: json['lastActiveAt'] != null
+          ? DateTime.parse(json['lastActiveAt'])
+          : null,
       isActive: json['isActive'] ?? true,
       lifestyle: json['lifestyle'],
       relationshipGoals: json['relationshipGoals'],
@@ -230,10 +229,9 @@ class Match {
       userId2: json['userId2'].toString(),
       matchedAt: DateTime.parse(json['matchedAt']),
       isActive: json['isActive'] ?? true,
-      otherUserProfile:
-          json['otherUserProfile'] != null
-              ? UserProfile.fromJson(json['otherUserProfile'])
-              : null,
+      otherUserProfile: json['otherUserProfile'] != null
+          ? UserProfile.fromJson(json['otherUserProfile'])
+          : null,
     );
   }
 }
@@ -311,6 +309,8 @@ class Message {
   final String content;
   final DateTime timestamp;
   final bool isRead;
+  final MessageType type;
+  final DateTime? readAt;
 
   Message({
     required this.id,
@@ -319,16 +319,21 @@ class Message {
     required this.content,
     required this.timestamp,
     this.isRead = false,
+    this.type = MessageType.text,
+    this.readAt,
   });
 
   factory Message.fromJson(Map<String, dynamic> json) {
     return Message(
-      id: json['id'],
-      senderId: json['senderId'],
-      receiverId: json['receiverId'],
-      content: json['content'],
-      timestamp: DateTime.parse(json['timestamp']),
+      id: json['id']?.toString() ?? '',
+      senderId: json['senderId'] ?? '',
+      receiverId: json['receiverId'] ?? '',
+      content: json['content'] ?? '',
+      timestamp: DateTime.tryParse(json['timestamp'] ?? json['sentAt'] ?? '') ??
+          DateTime.now(),
       isRead: json['isRead'] ?? false,
+      type: MessageType.values[json['type'] ?? 0],
+      readAt: json['readAt'] != null ? DateTime.tryParse(json['readAt']) : null,
     );
   }
 
@@ -340,6 +345,36 @@ class Message {
       'content': content,
       'timestamp': timestamp.toIso8601String(),
       'isRead': isRead,
+      'type': type.index,
+      if (readAt != null) 'readAt': readAt!.toIso8601String(),
     };
   }
+
+  Message copyWith({
+    String? id,
+    String? senderId,
+    String? receiverId,
+    String? content,
+    DateTime? timestamp,
+    bool? isRead,
+    MessageType? type,
+    DateTime? readAt,
+  }) {
+    return Message(
+      id: id ?? this.id,
+      senderId: senderId ?? this.senderId,
+      receiverId: receiverId ?? this.receiverId,
+      content: content ?? this.content,
+      timestamp: timestamp ?? this.timestamp,
+      isRead: isRead ?? this.isRead,
+      type: type ?? this.type,
+      readAt: readAt ?? this.readAt,
+    );
+  }
+}
+
+enum MessageType {
+  text,
+  image,
+  emoji,
 }

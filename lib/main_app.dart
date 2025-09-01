@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'screens/home_screen.dart';
-import 'screens/matches_screen.dart';
+import 'screens/enhanced_matches_screen.dart';
 import 'screens/settings_screen.dart';
 import 'tinder_like_profile_screen.dart';
+import 'services/app_initialization_service.dart';
 
 class MainApp extends StatefulWidget {
   const MainApp({super.key});
@@ -16,10 +17,24 @@ class _MainAppState extends State<MainApp> {
 
   final List<Widget> _screens = [
     const HomeScreen(),
-    const MatchesScreen(),
+    const EnhancedMatchesScreen(),
     const TinderLikeProfileScreen(isFirstTime: false),
     const SettingsScreen(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeApp();
+  }
+
+  Future<void> _initializeApp() async {
+    try {
+      await AppInitializationService().initializeApp();
+    } catch (e) {
+      print('App initialization error: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
