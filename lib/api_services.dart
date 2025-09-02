@@ -50,7 +50,7 @@ class ApiException implements Exception {
 
 // Authentication API Service
 class AuthApiService extends BaseApiService {
-  final String baseUrl = ApiUrls.gateway; // Use YARP gateway
+  final String baseUrl = ApiUrls.authService; // Use direct auth service
 
   Future<String> register({
     required String username,

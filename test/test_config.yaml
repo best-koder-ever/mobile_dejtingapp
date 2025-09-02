@@ -1,0 +1,35 @@
+# Test configuration for Flutter Dating App
+
+# This file contains common test configurations and settings
+# that can be used across all test files
+
+# Test Users for consistent testing
+test_user_1:
+  email: "testuser1@example.com"
+  password: "TestPassword123!"
+  name: "Test User One"
+  age: 25
+
+test_user_2:
+  email: "testuser2@example.com" 
+  password: "TestPassword123!"
+  name: "Test User Two"
+  age: 28
+
+# API Endpoints for testing
+api_base_url: "http://localhost:8080"
+auth_service_url: "http://localhost:8081"
+user_service_url: "http://localhost:8082"
+matchmaking_service_url: "http://localhost:8083"
+swipe_service_url: "http://localhost:8084"
+
+# Test timeouts (in milliseconds)
+default_timeout: 5000
+network_timeout: 10000
+widget_timeout: 3000
+
+# Test flags
+enable_integration_tests: true
+enable_e2e_tests: true
+enable_performance_tests: true
+mock_backend: false
