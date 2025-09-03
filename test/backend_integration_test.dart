@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import '../lib/backend_url.dart';
+import 'package:dejtingapp/backend_url.dart';
 
 /// Backend Integration Tests
 /// Tests all microservices are running and responding correctly
@@ -81,7 +81,7 @@ void main() {
         final body = {
           'email': 'test${DateTime.now().millisecondsSinceEpoch}@example.com',
           'password': 'TestPassword123!',
-          'name': 'Test User'
+          'username': 'TestUser${DateTime.now().millisecondsSinceEpoch}'
         };
 
         final response = await client.post(

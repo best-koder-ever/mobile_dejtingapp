@@ -56,7 +56,7 @@ class MessagingService {
       _hubConnection = HubConnectionBuilder()
           .withUrl(hubUrl,
               options: HttpConnectionOptions(
-                accessTokenFactory: () async => _authToken,
+                accessTokenFactory: () async => _authToken ?? '',
                 transport: HttpTransportType.WebSockets,
                 skipNegotiation: false,
                 logMessageContent: kDebugMode,
@@ -70,24 +70,24 @@ class MessagingService {
       _hubConnection!.on('Error', _onError);
 
       // Connection state handlers
-      _hubConnection!.onclose((exception) {
+      _hubConnection!.onclose(({Exception? error}) {
         _isConnected = false;
         _connectionStatusController.add('Disconnected');
         if (kDebugMode) {
-          print('SignalR connection closed: $exception');
+          print('SignalR connection closed: $error');
         }
         // Auto-reconnect after 5 seconds
         Timer(const Duration(seconds: 5), _reconnect);
       });
 
-      _hubConnection!.onreconnecting((exception) {
+      _hubConnection!.onreconnecting(({Exception? error}) {
         _connectionStatusController.add('Reconnecting...');
         if (kDebugMode) {
-          print('SignalR reconnecting: $exception');
+          print('SignalR reconnecting: $error');
         }
       });
 
-      _hubConnection!.onreconnected((connectionId) {
+      _hubConnection!.onreconnected(({String? connectionId}) {
         _isConnected = true;
         _connectionStatusController.add('Connected');
         if (kDebugMode) {
