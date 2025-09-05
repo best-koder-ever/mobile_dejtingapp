@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '../backend_url.dart';
 
 class AuthService {
-  static const String baseUrl = 'http://localhost:5001'; // auth-service
+  static String get baseUrl =>
+      ApiUrls.authService; // Use dynamic URL configuration
 
   static Future<Map<String, dynamic>?> login(
     String email,
@@ -50,7 +52,8 @@ class AuthService {
 }
 
 class PhotoService {
-  static const String baseUrl = 'http://localhost:5003'; // photo-service
+  static String get baseUrl =>
+      'http://localhost:5005'; // photo-service (not deployed in MVP)
 
   static Future<String?> uploadPhoto(String filePath) async {
     try {
@@ -89,7 +92,8 @@ class PhotoService {
 }
 
 class MatchmakingService {
-  static const String baseUrl = 'http://localhost:5002'; // matchmaking-service
+  static String get baseUrl =>
+      ApiUrls.matchmakingService; // Use dynamic URL configuration
 
   static Future<List<Map<String, dynamic>>> getProfiles(String userId) async {
     try {
@@ -150,7 +154,8 @@ class MatchmakingService {
 }
 
 class UserService {
-  static const String baseUrl = 'http://localhost:5001'; // auth-service
+  static String get baseUrl =>
+      ApiUrls.userService; // Use dynamic URL configuration
 
   static Future<Map<String, dynamic>?> getUserProfile(String userId) async {
     try {
