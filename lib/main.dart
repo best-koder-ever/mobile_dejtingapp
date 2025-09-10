@@ -1,10 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'main_app.dart';
 import 'screens/auth_screens.dart';
 import 'tinder_like_profile_screen.dart';
 import 'services/api_service.dart';
+import 'config/environment.dart';
 
 void main() {
+  // Initialize environment configuration
+  // Default to demo for easy testing, but you can change this
+  EnvSwitcher.useDemo();
+  
+  if (kDebugMode) {
+    print('🚀 Starting DatingApp in ${EnvironmentConfig.settings.name} environment');
+    print('Auth Service: ${EnvironmentConfig.settings.authServiceUrl}');
+  }
+  
   runApp(const DatingApp());
 }
 

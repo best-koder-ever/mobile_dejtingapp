@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'home_screen.dart';
 import 'register_screen.dart';
 import 'api_services.dart';
+import 'widgets/environment_selector.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -61,11 +62,14 @@ class _LoginScreenState extends State<LoginScreen> {
         backgroundColor: Colors.pink[400],
         foregroundColor: Colors.white,
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            // Environment Selector (only shows in debug mode)
+            const EnvironmentSelector(),
+            const SizedBox(height: 20),
             // App Logo/Title
             Icon(Icons.favorite, size: 80, color: Colors.pink[400]),
             const SizedBox(height: 20),

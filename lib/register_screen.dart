@@ -16,8 +16,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
       TextEditingController();
-  final TextEditingController _firstNameController = TextEditingController();
-  final TextEditingController _lastNameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
 
   bool _isLoading = false;
@@ -47,8 +45,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
         username: _usernameController.text.trim(),
         email: _emailController.text.trim(),
         password: _passwordController.text,
-        firstName: _firstNameController.text.trim(),
-        lastName: _lastNameController.text.trim(),
         phoneNumber:
             _phoneController.text.trim().isEmpty
                 ? null
@@ -128,43 +124,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               const SizedBox(height: 16),
 
-              // First Name Field
-              TextFormField(
-                controller: _firstNameController,
-                decoration: InputDecoration(
-                  labelText: 'First Name *',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  prefixIcon: const Icon(Icons.badge),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'First name is required';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
 
-              // Last Name Field
-              TextFormField(
-                controller: _lastNameController,
-                decoration: InputDecoration(
-                  labelText: 'Last Name *',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  prefixIcon: const Icon(Icons.badge),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Last name is required';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
 
               // Email Field
               TextFormField(

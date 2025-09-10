@@ -29,18 +29,25 @@ class AuthService {
   }
 
   static Future<Map<String, dynamic>?> register(
+    String username,
     String email,
     String password,
-    String name,
+    String phoneNumber,
   ) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/api/auth/register'),
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({'email': email, 'password': password, 'name': name}),
+        body: json.encode({
+          'username': username,
+          'email': email,
+          'password': password,
+          'confirmPassword': password, // Same as password for simplicity
+          'phoneNumber': phoneNumber,
+        }),
       );
 
-      if (response.statusCode == 201) {
+      if (response.statusCode == 200) {
         return json.decode(response.body);
       }
       return null;

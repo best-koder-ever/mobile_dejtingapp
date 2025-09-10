@@ -56,8 +56,6 @@ class AuthApiService extends BaseApiService {
     required String username,
     required String email,
     required String password,
-    required String firstName,
-    required String lastName,
     String? phoneNumber,
   }) async {
     final response = await http.post(
@@ -67,9 +65,8 @@ class AuthApiService extends BaseApiService {
         'username': username,
         'email': email,
         'password': password,
-        'firstName': firstName,
-        'lastName': lastName,
-        'phoneNumber': phoneNumber,
+        'confirmPassword': password, // Same as password for simplicity
+        'phoneNumber': phoneNumber ?? '', // Provide empty string if null
       }),
     );
 
