@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-Interactive Demo System for Dating App
+Enhanced Interactive Demo System for Dating App with Visual Debugging
 Provides menu-driven automated user journeys with real-time backend validation
+Now includes visual debugging capabilities and screenshot documentation
 """
 
 import requests
@@ -13,7 +14,19 @@ import subprocess
 import threading
 from datetime import datetime
 from typing import Dict, List, Optional
+from pathlib import Path
+
+# Enhanced FlutterAppAutomator with visual debugging
 from flutter_automator import FlutterAppAutomator
+
+# Check if visual debugging is available
+VISUAL_DEBUG_AVAILABLE = False
+try:
+    import pyautogui
+    VISUAL_DEBUG_AVAILABLE = True
+    print("🎯 Enhanced Demo: Visual debugging available")
+except ImportError:
+    print("🎯 Enhanced Demo: Running in text mode (install pyautogui for visual debugging)")
 
 class Colors:
     HEADER = '\033[95m'
@@ -34,15 +47,40 @@ class JourneyDemoOrchestrator:
             'matchmaking': 'http://localhost:5003'
         }
         self.demo_users = {
-            'alice': {'email': 'demo.alice@example.com', 'password': 'Demo123!'},
-            'bob': {'email': 'demo.bob@example.com', 'password': 'Demo123!'},
+            'alice': {'email': 'test@example.com', 'password': 'Test123!'},
+            'bob': {'email': 'demo.newuser.1757590950@example.com', 'password': 'Demo123!'},
             'charlie': {'email': 'demo.charlie@example.com', 'password': 'Demo123!'}
         }
         self.tokens = {}
         self.flutter_automator = FlutterAppAutomator()
+        self.flutter_running = False  # Track Flutter state
         
+    def ensure_flutter_ready(self):
+        """Ensure Flutter is running and ready (don't restart if already running)"""
+        if self.flutter_running:
+            # Just reset to login screen instead of restarting
+            self.print_step("🔄 Resetting Flutter app to login screen...", "INFO")
+            self.flutter_automator.reset_to_login()
+            return True
+        else:
+            # Start Flutter for the first time
+            if self.start_flutter_app():
+                self.flutter_running = True
+                return True
+            return False
+
     def ensure_clean_start(self):
-        """Ensure no conflicting processes are running before starting demo"""
+        """Clean start only for the very first demo run"""
+        if not self.flutter_running:
+            self.print_step("🧹 Initial clean environment setup...", "INFO")
+            try:
+                # Kill any existing flutter processes only on first run
+                subprocess.run(["pkill", "-f", "flutter"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                subprocess.run(["pkill", "-f", "dejtingapp"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                subprocess.run(["pkill", "-f", "main_demo"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                time.sleep(1)
+            except Exception as e:
+                pass  # Non-critical if cleanup fails
         self.print_step("🧹 Ensuring clean environment...", "INFO")
         try:
             # Kill any existing flutter processes
@@ -364,11 +402,10 @@ class JourneyDemoOrchestrator:
     
     def run_new_user_journey(self):
         """Demo: New user registration and profile creation"""
-        self.ensure_clean_start()
         self.print_step("🎬 Starting: NEW USER JOURNEY", "INFO")
         
-        # Start Flutter app if not running
-        if not self.start_flutter_app():
+        # Ensure Flutter is ready (don't restart)
+        if not self.ensure_flutter_ready():
             return
         
         # Create a new user backend
@@ -411,11 +448,10 @@ class JourneyDemoOrchestrator:
     
     def run_existing_user_journey(self):
         """Demo: Existing user login and browsing"""
-        self.ensure_clean_start()
         self.print_step("🎬 Starting: EXISTING USER JOURNEY", "INFO")
         
-        # Start Flutter app if not running
-        if not self.start_flutter_app():
+        # Ensure Flutter is ready (don't restart)
+        if not self.ensure_flutter_ready():
             return
         
         # Backend: Login as Alice
@@ -446,11 +482,10 @@ class JourneyDemoOrchestrator:
     
     def run_matching_journey(self):
         """Demo: Complete matching flow between two users"""
-        self.ensure_clean_start()
         self.print_step("🎬 Starting: MATCHING JOURNEY", "INFO")
         
-        # Start Flutter app if not running
-        if not self.start_flutter_app():
+        # Ensure Flutter is ready (don't restart)
+        if not self.ensure_flutter_ready():
             return
         
         # Backend: Login both Alice and Bob
@@ -703,12 +738,14 @@ class JourneyDemoOrchestrator:
             self.print_step(f"Database deep dive failed: {str(e)}", "ERROR")
     
     def show_menu(self):
-        """Display interactive menu"""
+        """Display interactive menu with enhanced visual debugging options"""
         while True:
+            visual_status = "🎯 Available" if VISUAL_DEBUG_AVAILABLE else "❌ Not Available"
             print(f"""
 {Colors.BOLD}{Colors.HEADER}
 ╔═══════════════════════════════════════╗
-║           SELECT DEMO JOURNEY          ║
+║      ENHANCED DATING APP DEMO         ║
+║      WITH VISUAL DEBUGGING            ║
 ╚═══════════════════════════════════════╝{Colors.ENDC}
 
 {Colors.OKBLUE}1.{Colors.ENDC} 🆕 New User Journey (Registration → Profile Setup)
@@ -721,9 +758,10 @@ class JourneyDemoOrchestrator:
 {Colors.OKBLUE}8.{Colors.ENDC} 🎮 Interactive Mode (Step-by-step)
 {Colors.OKBLUE}9.{Colors.ENDC} 📊 Show Demo Users & Database
 {Colors.OKBLUE}10.{Colors.ENDC} 🗄️ Database Deep Dive
+{Colors.OKBLUE}11.{Colors.ENDC} 📸 Visual Debugging Demo ({visual_status})
 {Colors.OKBLUE}0.{Colors.ENDC} ❌ Exit
 
-{Colors.WARNING}Choose an option (0-10): {Colors.ENDC}""", end="")
+{Colors.WARNING}Choose an option (0-11): {Colors.ENDC}""", end="")
             
             choice = input().strip()
             
@@ -751,11 +789,62 @@ class JourneyDemoOrchestrator:
                 self.show_demo_data()
             elif choice == '10':
                 self.database_deep_dive()
+            elif choice == '11':
+                self.run_visual_debugging_demo()
             else:
-                self.print_step("❌ Invalid option. Please choose 0-10.", "ERROR")
+                self.print_step("❌ Invalid option. Please choose 0-11.", "ERROR")
             
             if choice != '0':
                 input(f"\n{Colors.OKCYAN}Press Enter to return to menu...{Colors.ENDC}")
+    
+    def run_visual_debugging_demo(self):
+        """Run the enhanced visual debugging demonstration"""
+        self.print_step("🎬 Starting Visual Debugging Demo", "INFO")
+        
+        if not VISUAL_DEBUG_AVAILABLE:
+            self.print_step("❌ Visual debugging not available", "ERROR")
+            self.print_step("   To enable: create virtual environment and install pyautogui", "INFO")
+            self.print_step("   Commands:", "INFO")
+            self.print_step("     python3 -m venv demo_env", "INFO")
+            self.print_step("     source demo_env/bin/activate", "INFO")
+            self.print_step("     pip install pyautogui Pillow", "INFO")
+            self.print_step("     sudo apt install gnome-screenshot", "INFO")
+            return
+        
+        try:
+            # Initialize automator with visual debugging
+            self.print_step("🤖 Initializing enhanced automator...", "INFO")
+            automator = FlutterAppAutomator()
+            
+            # Run comprehensive visual debugging demo
+            self.print_step("📸 Running visual debugging demonstration...", "INFO")
+            result = automator.run_visual_debugging_demo()
+            
+            if result:
+                self.print_step("✅ Visual debugging demo completed successfully!", "SUCCESS")
+                
+                # Show screenshots if available
+                screenshots_dir = Path("demo_screenshots")
+                if screenshots_dir.exists():
+                    sessions = list(screenshots_dir.glob("session_*"))
+                    if sessions:
+                        latest_session = max(sessions, key=lambda p: p.stat().st_mtime)
+                        screenshots = list(latest_session.glob("*.png"))
+                        
+                        self.print_step(f"📸 {len(screenshots)} screenshots saved to:", "SUCCESS")
+                        self.print_step(f"   {latest_session}", "INFO")
+                        
+                        # Offer to open screenshots directory
+                        if screenshots:
+                            view_choice = input(f"\n{Colors.WARNING}Open screenshots directory? (y/n): {Colors.ENDC}")
+                            if view_choice.lower() == 'y':
+                                subprocess.run(["xdg-open", str(latest_session)], check=False)
+                
+            else:
+                self.print_step("❌ Visual debugging demo failed", "ERROR")
+                
+        except Exception as e:
+            self.print_step(f"❌ Visual debugging demo error: {str(e)}", "ERROR")
     
     def run(self):
         """Main demo runner"""
@@ -772,12 +861,58 @@ class JourneyDemoOrchestrator:
         self.show_menu()
 
 if __name__ == "__main__":
+    import argparse
+    
+    parser = argparse.ArgumentParser(description='🛡️ Safe Dating App Demo System')
+    parser.add_argument('--scenario', choices=['new_user', 'existing_user', 'matching', 'full_flow'], 
+                       help='Run specific scenario and exit automatically')
+    parser.add_argument('--quick-test', action='store_true', 
+                       help='Run quick new user test and exit')
+    
+    args = parser.parse_args()
+    
     demo = JourneyDemoOrchestrator()
-    try:
-        demo.run()
-    except KeyboardInterrupt:
-        print(f"\n{Colors.WARNING}Demo interrupted by user{Colors.ENDC}")
-        demo.stop_flutter_app()
-    except Exception as e:
-        print(f"\n{Colors.FAIL}Demo error: {str(e)}{Colors.ENDC}")
-        demo.stop_flutter_app()
+    
+    # Auto-run scenarios with exit
+    if args.quick_test or args.scenario:
+        print("🛡️ Running automated scenario with VS Code protection...")
+        
+        # Check services first
+        if not demo.check_backend_services():
+            print("❌ Backend services not running. Please start them first.")
+            sys.exit(1)
+        
+        try:
+            if args.quick_test or args.scenario == 'new_user':
+                print("🎬 Running: New User Journey")
+                demo.run_new_user_journey()
+            elif args.scenario == 'existing_user':
+                print("🎬 Running: Existing User Journey") 
+                demo.run_existing_user_journey()
+            elif args.scenario == 'matching':
+                print("🎬 Running: Matching Journey")
+                demo.run_matching_journey()
+            elif args.scenario == 'full_flow':
+                print("🎬 Running: Full User Flow")
+                demo.run_full_user_flow()
+            
+            print("✅ Scenario completed! Cleaning up...")
+            demo.stop_flutter_app()
+            print("👋 Demo finished automatically!")
+            
+        except KeyboardInterrupt:
+            print("\n🛑 Demo interrupted by user")
+            demo.stop_flutter_app()
+            sys.exit(0)
+        except Exception as e:
+            print(f"❌ Demo error: {e}")
+            demo.stop_flutter_app()
+            sys.exit(1)
+    else:
+        # Interactive mode
+        try:
+            demo.run()
+        except KeyboardInterrupt:
+            print("\n🛑 Demo interrupted by user")
+            demo.stop_flutter_app()
+            sys.exit(0)
