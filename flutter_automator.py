@@ -238,6 +238,45 @@ class FlutterAppAutomator:
         # In a full implementation, you'd compare before/after screenshots
         return True
     
+    def ensure_flutter_window_focus(self, action_description: str = "") -> bool:
+        """Enhanced safety: Ensure Flutter window is focused before any action"""
+        try:
+            # Check current active window
+            current_window = self.get_active_window()
+            
+            if current_window:
+                # 🛡️ SAFETY CHECK: Block VS Code windows
+                if self.is_vscode_window(current_window):
+                    print(f"🛡️  SAFETY BLOCK: VS Code window detected: {current_window}")
+                    print(f"🛡️  Action blocked: {action_description}")
+                    print(f"🛡️  Please focus Flutter app window manually")
+                    return False
+                
+                # Check if we already have Flutter window focused
+                if "datingapp" in current_window.lower() or "flutter" in current_window.lower():
+                    print(f"✅ Flutter window already focused: {current_window}")
+                    return True
+            
+            # Try to find and focus Flutter window
+            print(f"🔍 Ensuring Flutter window focus for: {action_description}")
+            if self.find_flutter_window_with_retries(max_retries=3, retry_delay=1.0):
+                # Verify focus worked
+                time.sleep(0.5)
+                new_window = self.get_active_window()
+                if new_window and ("datingapp" in new_window.lower() or "flutter" in new_window.lower()):
+                    print(f"✅ Successfully focused Flutter window: {new_window}")
+                    return True
+                else:
+                    print(f"⚠️  Focus verification failed. Active window: {new_window}")
+                    return False
+            else:
+                print("❌ Could not find or focus Flutter window")
+                return False
+                
+        except Exception as e:
+            print(f"❌ Window focus error: {e}")
+            return False
+    
     def is_vscode_window(self, window_title: str) -> bool:
         """Check if window title matches VS Code patterns"""
         import re
@@ -372,21 +411,20 @@ class FlutterAppAutomator:
                 return False
     
     def send_keys(self, keys: str, delay: float = 2.0, action_description: str = "") -> bool:
-        """Send keyboard input to the focused Flutter app with minimal overhead"""
+        """Send keyboard input to the focused Flutter app with enhanced safety"""
         try:
-            # 🛡️ Safety check: ensure we're not in VS Code
+            # 🛡️ ENHANCED SAFETY: Ensure Flutter window focus before typing
+            if not self.ensure_flutter_window_focus(f"typing: {keys}"):
+                print(f"🛡️  BLOCKED: Cannot type '{keys}' - Flutter window not focused")
+                return False
+            
+            # Additional safety check
             current_window = self.get_active_window()
             if current_window and self.is_vscode_window(current_window):
                 print(f"🛡️  SAFETY BLOCK: Refusing to type into VS Code window: {current_window}")
                 return False
             
-            # Focus only if we don't have a window
-            if not self.app_window:
-                if not self.find_flutter_window_with_retries(max_retries=2, retry_delay=0.5):
-                    print("❌ Could not focus Flutter window for typing")
-                    return False
-            
-            # Clear any existing content first
+            # Clear any existing content first (safer approach)
             subprocess.run(["xdotool", "key", "ctrl+a"], timeout=2)
             time.sleep(0.2)
             
@@ -406,10 +444,15 @@ class FlutterAppAutomator:
             return False
     
     def send_key_combo(self, combo: str, delay: float = 1.0, suppress_focus_check: bool = False) -> bool:
-        """Send key combination with minimal overhead"""
+        """Send key combination with enhanced safety"""
         try:
-            # 🛡️ Safety check only if not suppressed
+            # 🛡️ ENHANCED SAFETY: Check window focus unless suppressed
             if not suppress_focus_check:
+                if not self.ensure_flutter_window_focus(f"key combo: {combo}"):
+                    print(f"🛡️  BLOCKED: Cannot send key combo '{combo}' - Flutter window not focused")
+                    return False
+                
+                # Additional safety check
                 current_window = self.get_active_window()
                 if current_window and self.is_vscode_window(current_window):
                     print(f"🛡️  SAFETY BLOCK: Refusing to send keys to VS Code window: {current_window}")
@@ -501,13 +544,10 @@ class FlutterAppAutomator:
         # Detect current screen
         current_screen = self.detect_current_screen()
         
-        # Fill registration form
-        print(f"   • Entering first name: {first_name}")
-        self.send_keys(first_name, action_description=f"Entering first name: {first_name}")
-        self.send_key_combo("Tab")
-        
-        print(f"   • Entering last name: {last_name}")
-        self.send_keys(last_name, action_description=f"Entering last name: {last_name}")
+        # Fill registration form - actual form has: Full Name, Email, Password, Confirm Password
+        full_name = f"{first_name} {last_name}"
+        print(f"   • Entering full name: {full_name}")
+        self.send_keys(full_name, action_description=f"Entering full name: {full_name}")
         self.send_key_combo("Tab")
         
         print(f"   • Entering email: {email}")
@@ -516,6 +556,10 @@ class FlutterAppAutomator:
         
         print("   • Entering password...")
         self.send_keys(password, action_description="Entering password")
+        self.send_key_combo("Tab")
+        
+        print("   • Confirming password...")
+        self.send_keys(password, action_description="Confirming password")
         
         print("   • Submitting registration...")
         self.send_key_combo("Return")
@@ -645,6 +689,31 @@ class FlutterAppAutomator:
         
         # Additional cleanup to ensure no lingering processes
         self.cleanup_existing_processes()
+    
+    def reset_to_login(self):
+        """Reset the Flutter app to login screen"""
+        self.log_action("🔄 Resetting to login screen")
+        
+        # Try to navigate back to login screen
+        # Method 1: Use app navigation
+        self.simulate_key_sequence(['Escape'] * 3)  # Exit any modals/screens
+        time.sleep(1)
+        
+        # Method 2: Restart the app if needed
+        if not self.ensure_focused():
+            self.log_action("🔄 App lost focus, restarting...")
+            self.stop_flutter_app()
+            time.sleep(2)
+            return self.start_flutter_app()
+        
+        # Method 3: Try to navigate to login via app logic
+        # For demo purposes, we'll assume pressing Escape a few times gets us back
+        self.simulate_key_sequence(['Escape'])
+        time.sleep(0.5)
+        
+        self.current_screen = "login"
+        self.log_action("✅ Reset to login screen")
+        return True
     
     def check_dependencies(self) -> bool:
         """Check if required tools are installed"""

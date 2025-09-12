@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import '../services/demo_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -14,6 +15,19 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _obscurePassword = true;
+  int _selectedDemoUserIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Auto-fill demo credentials if in demo mode
+    if (DemoService.isDemoMode && DemoService.demoUsers.isNotEmpty) {
+      final demoUser = DemoService.demoUsers[_selectedDemoUserIndex];
+      _emailController.text = demoUser['email']!;
+      _passwordController.text = demoUser['password']!;
+    }
+  }
 
   @override
   void dispose() {
@@ -30,6 +44,45 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
+      // If in demo mode, use demo service
+      if (DemoService.isDemoMode) {
+        final result =
+            await DemoService.loginWithDemoUser(_emailController.text.trim());
+
+        if (result.success && result.token != null && mounted) {
+          // Find the demo user data
+          final demoUser = DemoService.demoUsers.firstWhere(
+            (u) => u['email'] == _emailController.text.trim(),
+            orElse: () => {},
+          );
+
+          // Store user data with demo token
+          AppState().login('demo_${demoUser['email']}', result.token!, {
+            'id': 'demo_${demoUser['email']}',
+            'name': demoUser['name'] ?? 'Demo User',
+            'email': demoUser['email'] ?? '',
+            'age': 25,
+            'bio': demoUser['description'] ?? 'Demo user',
+            'photos': [],
+            'interests': [],
+          });
+
+          // Navigate to main app
+          Navigator.pushReplacementNamed(context, '/home');
+          return;
+        } else if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Demo login failed: ${result.message}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          setState(() => _isLoading = false);
+          return;
+        }
+      }
+
+      // Regular login for non-demo mode
       final result = await AuthService.login(
         _emailController.text.trim(),
         _passwordController.text,
@@ -64,29 +117,6 @@ class _LoginScreenState extends State<LoginScreen> {
           _isLoading = false;
         });
       }
-    }
-  }
-
-  Future<void> _demoLogin() async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    // Simulate demo login
-    await Future.delayed(const Duration(seconds: 1));
-
-    AppState().login('demo_user', 'demo_token', {
-      'id': 'demo_user',
-      'name': 'Demo User',
-      'email': 'demo@example.com',
-      'age': 25,
-      'bio': 'Demo user for testing',
-      'photos': [],
-      'interests': [],
-    });
-
-    if (mounted) {
-      Navigator.pushReplacementNamed(context, '/home');
     }
   }
 
@@ -138,6 +168,82 @@ class _LoginScreenState extends State<LoginScreen> {
                         key: _formKey,
                         child: Column(
                           children: [
+                            // Demo Mode Banner and User Selector
+                            if (DemoService.isDemoMode) ...[
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.shade50,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border:
+                                      Border.all(color: Colors.orange.shade300),
+                                ),
+                                child: Column(
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Icon(Icons.science,
+                                            color: Colors.orange.shade700,
+                                            size: 20),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          'DEMO MODE',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.orange.shade700,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    DropdownButtonFormField<int>(
+                                      value: _selectedDemoUserIndex,
+                                      decoration: InputDecoration(
+                                        labelText: 'Select Demo User',
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                                horizontal: 12, vertical: 8),
+                                        border: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                        ),
+                                      ),
+                                      items: DemoService.demoUsers
+                                          .asMap()
+                                          .entries
+                                          .map((entry) {
+                                        final index = entry.key;
+                                        final user = entry.value;
+                                        return DropdownMenuItem<int>(
+                                          value: index,
+                                          child: Text(
+                                            '${user['name']} (${user['email']})',
+                                            style:
+                                                const TextStyle(fontSize: 12),
+                                          ),
+                                        );
+                                      }).toList(),
+                                      onChanged: (int? newIndex) {
+                                        if (newIndex != null) {
+                                          setState(() {
+                                            _selectedDemoUserIndex = newIndex;
+                                            final selectedUser =
+                                                DemoService.demoUsers[newIndex];
+                                            _emailController.text =
+                                                selectedUser['email']!;
+                                            _passwordController.text =
+                                                selectedUser['password']!;
+                                          });
+                                        }
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                            ],
                             TextFormField(
                               controller: _emailController,
                               keyboardType: TextInputType.emailAddress,
@@ -225,49 +331,39 @@ class _LoginScreenState extends State<LoginScreen> {
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                 ),
-                                child:
-                                    _isLoading
-                                        ? const SizedBox(
-                                          height: 20,
-                                          width: 20,
-                                          child: CircularProgressIndicator(
-                                            color: Colors.white,
-                                            strokeWidth: 2,
-                                          ),
-                                        )
-                                        : const Text(
-                                          'Login',
-                                          style: TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                          ),
+                                child: _isLoading
+                                    ? const SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(
+                                          color: Colors.white,
+                                          strokeWidth: 2,
                                         ),
+                                      )
+                                    : Text(
+                                        DemoService.isDemoMode
+                                            ? 'Login as ${DemoService.demoUsers[_selectedDemoUserIndex]['name']}'
+                                            : 'Login',
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
                               ),
                             ),
-                            const SizedBox(height: 12),
-                            SizedBox(
-                              width: double.infinity,
-                              child: OutlinedButton(
-                                onPressed: _isLoading ? null : _demoLogin,
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: Colors.pink,
-                                  side: const BorderSide(color: Colors.pink),
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 16,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
+                            // Demo Mode Instructions
+                            if (DemoService.isDemoMode) ...[
+                              const SizedBox(height: 12),
+                              Text(
+                                'Demo credentials are pre-filled. Just press login!',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.orange.shade700,
+                                  fontStyle: FontStyle.italic,
                                 ),
-                                child: const Text(
-                                  'Demo Login',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
+                                textAlign: TextAlign.center,
                               ),
-                            ),
+                            ],
                           ],
                         ),
                       ),
@@ -346,8 +442,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final result = await AuthService.register(
         _nameController.text.trim(), // username
         _emailController.text.trim(), // email
-        _passwordController.text,     // password
-        "1234567890",                 // phoneNumber
+        _passwordController.text, // password
+        "1234567890", // phoneNumber
       );
 
       if (result != null && mounted) {
@@ -589,23 +685,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                 ),
-                                child:
-                                    _isLoading
-                                        ? const SizedBox(
-                                          height: 20,
-                                          width: 20,
-                                          child: CircularProgressIndicator(
-                                            color: Colors.white,
-                                            strokeWidth: 2,
-                                          ),
-                                        )
-                                        : const Text(
-                                          'Create Account',
-                                          style: TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                          ),
+                                child: _isLoading
+                                    ? const SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(
+                                          color: Colors.white,
+                                          strokeWidth: 2,
                                         ),
+                                      )
+                                    : const Text(
+                                        'Create Account',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
                               ),
                             ),
                           ],

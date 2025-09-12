@@ -55,6 +55,14 @@ class JourneyDemoOrchestrator:
         self.flutter_automator = FlutterAppAutomator()
         self.flutter_running = False  # Track Flutter state
         
+    def safe_input(self, prompt=""):
+        """Safe input with EOF handling"""
+        try:
+            return input(prompt)
+        except (EOFError, KeyboardInterrupt):
+            print("\n👋 Input interrupted")
+            return None
+        
     def ensure_flutter_ready(self):
         """Ensure Flutter is running and ready (don't restart if already running)"""
         if self.flutter_running:
@@ -763,7 +771,13 @@ class JourneyDemoOrchestrator:
 
 {Colors.WARNING}Choose an option (0-11): {Colors.ENDC}""", end="")
             
-            choice = input().strip()
+            try:
+                choice = self.safe_input().strip() if hasattr(self, 'safe_input') else input().strip()
+                if choice is None:  # EOF/Interrupted
+                    break
+            except (EOFError, KeyboardInterrupt):
+                print("\n👋 Demo interrupted")
+                break
             
             if choice == '0':
                 self.print_step("👋 Exiting demo system...", "INFO")
@@ -795,7 +809,9 @@ class JourneyDemoOrchestrator:
                 self.print_step("❌ Invalid option. Please choose 0-11.", "ERROR")
             
             if choice != '0':
-                input(f"\n{Colors.OKCYAN}Press Enter to return to menu...{Colors.ENDC}")
+                result = self.safe_input(f"\n{Colors.OKCYAN}Press Enter to return to menu...{Colors.ENDC}")
+                if result is None:  # EOF/Interrupted
+                    break
     
     def run_visual_debugging_demo(self):
         """Run the enhanced visual debugging demonstration"""
