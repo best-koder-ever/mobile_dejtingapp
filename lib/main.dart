@@ -2,20 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'main_app.dart';
 import 'screens/auth_screens.dart';
+import 'screens/photo_upload_screen.dart';
 import 'tinder_like_profile_screen.dart';
 import 'services/api_service.dart';
 import 'config/environment.dart';
 
 void main() {
   // Initialize environment configuration
-  // Default to demo for easy testing, but you can change this
+  // Use demo for simplified setup with in-memory databases
   EnvSwitcher.useDemo();
-  
+
   if (kDebugMode) {
-    print('🚀 Starting DatingApp in ${EnvironmentConfig.settings.name} environment');
+    print(
+        '🚀 Starting DatingApp in ${EnvironmentConfig.settings.name} environment');
     print('Auth Service: ${EnvironmentConfig.settings.authServiceUrl}');
   }
-  
+
   runApp(const DatingApp());
 }
 
@@ -49,8 +51,19 @@ class DatingApp extends StatelessWidget {
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
         '/home': (context) => const MainApp(),
-        '/profile':
-            (context) => const TinderLikeProfileScreen(isFirstTime: false),
+        '/profile': (context) =>
+            const TinderLikeProfileScreen(isFirstTime: false),
+        '/photos': (context) => PhotoUploadScreen(
+              authToken: AppState().authToken ?? '',
+              userId: int.tryParse(AppState().userId ?? '1') ?? 1,
+              onPhotoRequirementMet: (bool met) {
+                if (met) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Photo requirements met!')),
+                  );
+                }
+              },
+            ),
       },
       home: _getInitialScreen(),
     );

@@ -414,9 +414,9 @@ Choose an option (0-9): """, end="")
         else:
             self.print_step("❌ Service health check failed - some services are not responding", "ERROR")
             self.print_step("🔧 Make sure all microservices are running with DEMO_MODE=true:", "INFO")
-            self.print_step("   • AuthService on port 5001", "INFO")
-            self.print_step("   • UserService on port 5002", "INFO")
-            self.print_step("   • MatchmakingService on port 5003", "INFO")
+            self.print_step("   • AuthService on port 8081", "INFO")
+            self.print_step("   • UserService on port 8082", "INFO")
+            self.print_step("   • MatchmakingService on port 8083", "INFO")
             self.print_step("💡 Run: cd /home/m/development/DatingApp && ./start_demo_services.sh", "INFO")
         
         return True

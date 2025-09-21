@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'package:flutter/foundation.dart';
 
 class DemoService {
   static const String _baseUrl = 'http://localhost';
@@ -47,7 +46,7 @@ class DemoService {
   /// Check if demo mode is enabled (you can control this with env vars or build flags)
   static bool get isDemoMode {
     // You can change this to check environment variables or build configurations
-    return kDebugMode; // Only in debug mode for now
+    return true; // Always enable demo mode for now
   }
 
   /// Initialize demo environment - starts backend and seeds data

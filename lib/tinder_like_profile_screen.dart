@@ -199,23 +199,23 @@ class _TinderLikeProfileScreenState extends State<TinderLikeProfileScreen> {
     setState(() {
       _profileCompletionPercentage =
           ProfileCompletionCalculator.calculateProfileCompletion(
-            firstName: _firstNameController.text,
-            lastName: _lastNameController.text,
-            bio: _bioController.text,
-            photoUrls: _photoUrls,
-            interests: _interests,
-            city: _cityController.text,
-            occupation: _occupationController.text,
-            education: _selectedEducation,
-            gender: _selectedGender,
-            lookingFor: _selectedLookingFor,
-            relationshipType: _selectedRelationshipType,
-            drinking: _selectedDrinking,
-            smoking: _selectedSmoking,
-            workout: _selectedWorkout,
-            height: _heightController.text,
-            languages: _languages,
-          );
+        firstName: _firstNameController.text,
+        lastName: _lastNameController.text,
+        bio: _bioController.text,
+        photoUrls: _photoUrls,
+        interests: _interests,
+        city: _cityController.text,
+        occupation: _occupationController.text,
+        education: _selectedEducation,
+        gender: _selectedGender,
+        lookingFor: _selectedLookingFor,
+        relationshipType: _selectedRelationshipType,
+        drinking: _selectedDrinking,
+        smoking: _selectedSmoking,
+        workout: _selectedWorkout,
+        height: _heightController.text,
+        languages: _languages,
+      );
     });
   }
 
@@ -493,6 +493,8 @@ class _TinderLikeProfileScreenState extends State<TinderLikeProfileScreen> {
                 _buildErrorCard(),
                 const SizedBox(height: 16),
               ],
+              _buildManagePhotosButton(),
+              const SizedBox(height: 16),
               _buildSaveButton(),
               if (!widget.isFirstTime && widget.userProfile != null) ...[
                 const SizedBox(height: 12),
@@ -643,8 +645,8 @@ class _TinderLikeProfileScreenState extends State<TinderLikeProfileScreen> {
                   labelText: 'First Name *',
                   border: OutlineInputBorder(),
                 ),
-                validator:
-                    (value) => value?.isEmpty ?? true ? 'Required' : null,
+                validator: (value) =>
+                    value?.isEmpty ?? true ? 'Required' : null,
                 onChanged: (_) => _calculateProfileCompletion(),
               ),
             ),
@@ -656,8 +658,8 @@ class _TinderLikeProfileScreenState extends State<TinderLikeProfileScreen> {
                   labelText: 'Last Name *',
                   border: OutlineInputBorder(),
                 ),
-                validator:
-                    (value) => value?.isEmpty ?? true ? 'Required' : null,
+                validator: (value) =>
+                    value?.isEmpty ?? true ? 'Required' : null,
                 onChanged: (_) => _calculateProfileCompletion(),
               ),
             ),
@@ -823,17 +825,16 @@ class _TinderLikeProfileScreenState extends State<TinderLikeProfileScreen> {
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children:
-              _availableInterests.map((interest) {
-                final isSelected = _interests.contains(interest);
-                return FilterChip(
-                  label: Text(interest),
-                  selected: isSelected,
-                  onSelected: (selected) => _toggleInterest(interest),
-                  selectedColor: Colors.pink[200],
-                  checkmarkColor: Colors.pink[800],
-                );
-              }).toList(),
+          children: _availableInterests.map((interest) {
+            final isSelected = _interests.contains(interest);
+            return FilterChip(
+              label: Text(interest),
+              selected: isSelected,
+              onSelected: (selected) => _toggleInterest(interest),
+              selectedColor: Colors.pink[200],
+              checkmarkColor: Colors.pink[800],
+            );
+          }).toList(),
         ),
       ],
     );
@@ -848,17 +849,16 @@ class _TinderLikeProfileScreenState extends State<TinderLikeProfileScreen> {
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children:
-              _languageOptions.map((language) {
-                final isSelected = _languages.contains(language);
-                return FilterChip(
-                  label: Text(language),
-                  selected: isSelected,
-                  onSelected: (selected) => _toggleLanguage(language),
-                  selectedColor: Colors.blue[200],
-                  checkmarkColor: Colors.blue[800],
-                );
-              }).toList(),
+          children: _languageOptions.map((language) {
+            final isSelected = _languages.contains(language);
+            return FilterChip(
+              label: Text(language),
+              selected: isSelected,
+              onSelected: (selected) => _toggleLanguage(language),
+              selectedColor: Colors.blue[200],
+              checkmarkColor: Colors.blue[800],
+            );
+          }).toList(),
         ),
       ],
     );
@@ -929,13 +929,11 @@ class _TinderLikeProfileScreenState extends State<TinderLikeProfileScreen> {
         labelText: label,
         border: const OutlineInputBorder(),
       ),
-      items:
-          options
-              .map(
-                (option) =>
-                    DropdownMenuItem(value: option, child: Text(option)),
-              )
-              .toList(),
+      items: options
+          .map(
+            (option) => DropdownMenuItem(value: option, child: Text(option)),
+          )
+          .toList(),
       onChanged: onChanged,
     );
   }
@@ -965,16 +963,42 @@ class _TinderLikeProfileScreenState extends State<TinderLikeProfileScreen> {
             borderRadius: BorderRadius.circular(12),
           ),
         ),
-        child:
-            _isLoading
-                ? const CircularProgressIndicator(color: Colors.white)
-                : Text(
-                  widget.isFirstTime ? 'Create Profile' : 'Save Changes',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+        child: _isLoading
+            ? const CircularProgressIndicator(color: Colors.white)
+            : Text(
+                widget.isFirstTime ? 'Create Profile' : 'Save Changes',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
                 ),
+              ),
+      ),
+    );
+  }
+
+  Widget _buildManagePhotosButton() {
+    return SizedBox(
+      width: double.infinity,
+      height: 50,
+      child: ElevatedButton.icon(
+        onPressed: () {
+          Navigator.pushNamed(context, '/photos');
+        },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.purple[400],
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        icon: const Icon(Icons.photo_library),
+        label: const Text(
+          'Manage Photos',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
     );
   }
@@ -1025,15 +1049,14 @@ class _TinderLikeProfileScreenState extends State<TinderLikeProfileScreen> {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children:
-                profile.interests
-                    .map(
-                      (interest) => Chip(
-                        label: Text(interest),
-                        backgroundColor: Colors.pink[100],
-                      ),
-                    )
-                    .toList(),
+            children: profile.interests
+                .map(
+                  (interest) => Chip(
+                    label: Text(interest),
+                    backgroundColor: Colors.pink[100],
+                  ),
+                )
+                .toList(),
           ),
           const SizedBox(height: 16),
         ],

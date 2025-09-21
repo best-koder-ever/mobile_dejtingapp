@@ -20,9 +20,9 @@ from datetime import datetime
 class BackendDemoTester:
     def __init__(self):
         # Use REAL API endpoints - no more demo controllers!
-        self.auth_base_url = "http://localhost:5001/api"
-        self.user_base_url = "http://localhost:5002/api" 
-        self.matching_base_url = "http://localhost:5003/api"
+        self.auth_base_url = "http://localhost:8081/api"
+        self.user_base_url = "http://localhost:8082/api" 
+        self.matching_base_url = "http://localhost:8083/api"
         self.session = requests.Session()
         self.test_user_id = None
         self.auth_token = None

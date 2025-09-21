@@ -42,9 +42,9 @@ class Colors:
 class JourneyDemoOrchestrator:
     def __init__(self):
         self.base_urls = {
-            'auth': 'http://localhost:5001',
-            'user': 'http://localhost:5002', 
-            'matchmaking': 'http://localhost:5003'
+            'auth': 'http://localhost:8081',
+            'user': 'http://localhost:8082', 
+            'matchmaking': 'http://localhost:8083'
         }
         self.demo_users = {
             'alice': {'email': 'test@example.com', 'password': 'Test123!'},

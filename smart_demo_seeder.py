@@ -21,9 +21,9 @@ import random
 class SmartDemoSeeder:
     def __init__(self):
         # Use the REAL API endpoints, not demo ones!
-        self.auth_base_url = "http://localhost:5001/api"
-        self.user_base_url = "http://localhost:5002/api"
-        self.matching_base_url = "http://localhost:5003/api"
+        self.auth_base_url = "http://localhost:8081/api"
+        self.user_base_url = "http://localhost:8082/api"
+        self.matching_base_url = "http://localhost:8083/api"
         self.session = requests.Session()
         self.demo_users = []
         self.auth_tokens = {}
