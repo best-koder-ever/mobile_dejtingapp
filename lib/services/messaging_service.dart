@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 import '../models.dart';
 
 class MessagingService {
-  static const String baseUrl = 'http://localhost:5007';
+  static const String baseUrl = 'http://localhost:8086';
   static const String hubUrl = '$baseUrl/messagingHub';
 
   HubConnection? _hubConnection;

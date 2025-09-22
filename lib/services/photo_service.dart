@@ -21,7 +21,7 @@ class PhotoService {
     try {
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse('$baseUrl/api/photos/upload'),
+        Uri.parse('$baseUrl/api/photos'),
       );
 
       // Add JWT token

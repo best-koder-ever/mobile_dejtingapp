@@ -1,19 +1,48 @@
 {
+    // DART/FLUTTER DEBUGGING
     "dart.debugExternalLibraries": true,
     "dart.debugSdkLibraries": false,
     "dart.lineLength": 80,
     "dart.defaultLaunchConfiguration": "dejtingapp (web - Chrome)",
     "dart.flutterTestAdditionalArgs": ["-d", "chrome"],
     "dart.flutterRunAdditionalArgs": ["-d", "chrome", "--web-port=36349"],
+    
+    // REDUCE FLUTTER NOISE
+    "dart.showInspectorNotificationsForWidgetErrors": false,
+    "dart.warnWhenEditingFilesOutsideWorkspace": false,
+    "dart.previewFlutterUiGuides": true,
+    
+    // EDITOR SETTINGS
     "editor.formatOnSave": true,
     "editor.rulers": [80],
     "editor.tabSize": 2,
+    
+    // CODE ACTIONS
+    "[dart]": {
+      "editor.codeActionsOnSave": {
+        "source.organizeImports": "explicit",
+        "source.fixAll": "explicit"
+      }
+    },
+    
+    // FILE MANAGEMENT
     "files.exclude": {
       "**/.dart_tool": true,
       "**/.idea": true,
       "**/.vscode": true,
-      "**/build": true
+      "**/build": true,
+      "**/.flutter-plugins": true,
+      "**/.flutter-plugins-dependencies": true
     },
+    
+    // PERFORMANCE OPTIMIZATION
+    "files.watcherExclude": {
+      "**/.git/objects/**": true,
+      "**/.dart_tool/**": true,
+      "**/build/**": true
+    },
+    
+    // FLUTTER CONFIGURATION
     "flutter.createAndroidLanguage": "kotlin",
     "flutter.createIOSLanguage": "swift"
   }
