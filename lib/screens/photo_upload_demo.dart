@@ -29,7 +29,7 @@ class _PhotoUploadDemoState extends State<PhotoUploadDemo> {
       if (!isServiceHealthy) {
         setState(() {
           errorMessage =
-              'PhotoService not running on port 8084.\nPlease start it with: docker-compose up photo-service';
+              'PhotoService not running on port 8085.\nPlease start it with: ./dev-start.sh';
           isLoading = false;
         });
         return;
@@ -132,11 +132,10 @@ class _PhotoUploadDemoState extends State<PhotoUploadDemo> {
                         SizedBox(height: 8),
                         Text('1. Start PhotoService:'),
                         Text('   cd /home/m/development/DatingApp'),
-                        Text('   docker-compose up photo-service'),
+                        Text('   ./dev-start.sh'),
                         SizedBox(height: 8),
                         Text('2. Ensure demo backend is running:'),
-                        Text(
-                            '   DEMO_MODE=true docker-compose up auth-service'),
+                        Text('   All services on ports 8080-8087'),
                       ],
                     ),
                   ),
@@ -184,7 +183,7 @@ class _PhotoUploadDemoState extends State<PhotoUploadDemo> {
                   ),
                   SizedBox(height: 4),
                   Text(
-                    'PhotoService: http://localhost:8084',
+                    'PhotoService: http://localhost:8085',
                     style: TextStyle(
                       fontSize: 12,
                       color: Colors.orange.shade600,

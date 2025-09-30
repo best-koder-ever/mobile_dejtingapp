@@ -40,8 +40,8 @@ class EnvironmentConfig {
     authServiceUrl: _getBaseUrl(8081),
     userServiceUrl: _getBaseUrl(8082),
     matchmakingServiceUrl: _getBaseUrl(8083),
-    photoServiceUrl: _getBaseUrl(8084),
-    swipeServiceUrl: _getBaseUrl(8085),
+    photoServiceUrl: _getBaseUrl(8085), // Updated to port 8085
+    swipeServiceUrl: _getBaseUrl(8087), // Updated to port 8087
     gatewayUrl: _getBaseUrl(8080),
     apiTimeout: const Duration(seconds: 30),
     enableLogging: true,

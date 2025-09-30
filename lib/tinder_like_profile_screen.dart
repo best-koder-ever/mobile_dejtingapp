@@ -1,10 +1,12 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:io';
-import 'models.dart';
+
 import 'api_services.dart';
-import 'utils/profile_completion_calculator.dart';
 import 'components/photo_grid_card.dart';
+import 'models.dart';
+import 'utils/profile_completion_calculator.dart';
 
 class TinderLikeProfileScreen extends StatefulWidget {
   final UserProfile? userProfile;

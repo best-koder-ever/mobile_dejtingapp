@@ -3,6 +3,10 @@ import 'package:flutter/foundation.dart';
 import 'main_app.dart';
 import 'screens/auth_screens.dart';
 import 'screens/photo_upload_screen.dart';
+import 'screens/photo_upload_test.dart';
+import 'screens/auto_photo_upload_test.dart';
+import 'screens/test_launcher.dart';
+import 'screens/real_photo_upload.dart';
 import 'tinder_like_profile_screen.dart';
 import 'services/api_service.dart';
 import 'config/environment.dart';
@@ -64,8 +68,12 @@ class DatingApp extends StatelessWidget {
                 }
               },
             ),
+        '/photo-test': (context) => PhotoUploadTestScreen(),
+        '/auto-photo-test': (context) => AutoPhotoUploadTest(),
+        '/test-launcher': (context) => TestLauncherScreen(),
+        '/real-photo-upload': (context) => RealPhotoUploadScreen(),
       },
-      home: _getInitialScreen(),
+      home: TestLauncherScreen(), // Temporarily use test launcher as home
     );
   }
 
@@ -73,12 +81,6 @@ class DatingApp extends StatelessWidget {
     // Check if user is logged in
     final userId = AppState().userId;
     return userId != null ? '/home' : '/login';
-  }
-
-  Widget _getInitialScreen() {
-    // Check if user is logged in
-    final userId = AppState().userId;
-    return userId != null ? const MainApp() : const LoginScreen();
   }
 }
 

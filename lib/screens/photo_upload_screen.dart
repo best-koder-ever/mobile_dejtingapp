@@ -3,17 +3,21 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../services/photo_service.dart';
+import '../services/demo_service.dart';
+import '../config/environment.dart';
 
 class PhotoUploadScreen extends StatefulWidget {
-  final String authToken;
-  final int userId;
+  final String? authToken; // Made optional for demo mode
+  final int? userId; // Made optional for demo mode
   final Function(bool isComplete) onPhotoRequirementMet;
+  final bool isDemoMode; // New parameter to enable demo features
 
   const PhotoUploadScreen({
     Key? key,
-    required this.authToken,
-    required this.userId,
+    this.authToken,
+    this.userId,
     required this.onPhotoRequirementMet,
+    this.isDemoMode = false, // Default to production mode
   }) : super(key: key);
 
   @override
@@ -28,6 +32,12 @@ class _PhotoUploadScreenState extends State<PhotoUploadScreen> {
   bool isLoading = false;
   String? statusMessage;
 
+  // Demo mode state
+  String? _effectiveAuthToken;
+  int? _effectiveUserId;
+  bool _demoInitialized = false;
+  String? _demoError;
+
   static const int minPhotos = 4;
   static const int maxPhotos = 6;
 
@@ -35,7 +45,62 @@ class _PhotoUploadScreenState extends State<PhotoUploadScreen> {
   void initState() {
     super.initState();
     _initializePhotoSlots();
-    _loadExistingPhotos();
+    if (widget.isDemoMode) {
+      _initializeDemoMode();
+    } else {
+      _effectiveAuthToken = widget.authToken;
+      _effectiveUserId = widget.userId;
+      _demoInitialized = true;
+      _loadExistingPhotos();
+    }
+  }
+
+  Future<void> _initializeDemoMode() async {
+    setState(() {
+      isLoading = true;
+      statusMessage = 'Initializing demo mode...';
+    });
+
+    try {
+      // Check if PhotoService is running
+      final isServiceHealthy = await _photoService.isServiceHealthy();
+      if (!isServiceHealthy) {
+        setState(() {
+          _demoError =
+              'PhotoService not running on port 8085.\nPlease start it with: ./dev-start.sh';
+          isLoading = false;
+          _demoInitialized = false;
+        });
+        return;
+      }
+
+      // Auto-login with demo user
+      final result =
+          await DemoService.loginWithDemoUser('erik.astrom@demo.com');
+
+      if (result.success && result.token != null) {
+        setState(() {
+          _effectiveAuthToken = result.token;
+          _effectiveUserId = 1; // Default to user ID 1 for demo
+          _demoInitialized = true;
+          isLoading = false;
+          statusMessage = 'Demo initialized successfully';
+        });
+        _loadExistingPhotos();
+      } else {
+        setState(() {
+          _demoError = 'Failed to login with demo user: ${result.message}';
+          isLoading = false;
+          _demoInitialized = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _demoError = 'Demo initialization failed: $e';
+        isLoading = false;
+        _demoInitialized = false;
+      });
+    }
   }
 
   void _initializePhotoSlots() {
@@ -50,12 +115,16 @@ class _PhotoUploadScreenState extends State<PhotoUploadScreen> {
   }
 
   Future<void> _loadExistingPhotos() async {
+    if (_effectiveAuthToken == null || _effectiveUserId == null) {
+      return; // Can't load photos without auth
+    }
+
     setState(() => isLoading = true);
 
     try {
       final userPhotos = await _photoService.getUserPhotos(
-        authToken: widget.authToken,
-        userId: widget.userId,
+        authToken: _effectiveAuthToken!,
+        userId: _effectiveUserId!,
       );
 
       if (userPhotos != null) {
@@ -149,6 +218,11 @@ class _PhotoUploadScreenState extends State<PhotoUploadScreen> {
   }
 
   Future<void> _uploadPhoto(File imageFile, int slotIndex) async {
+    if (_effectiveAuthToken == null) {
+      _showStatusMessage('Authentication required', isError: true);
+      return;
+    }
+
     setState(() {
       isLoading = true;
       statusMessage = 'Uploading photo...';
@@ -157,7 +231,7 @@ class _PhotoUploadScreenState extends State<PhotoUploadScreen> {
     try {
       final result = await _photoService.uploadPhoto(
         imageFile: imageFile,
-        authToken: widget.authToken,
+        authToken: _effectiveAuthToken!,
         isPrimary: photoSlots[slotIndex].isPrimary,
         displayOrder: slotIndex + 1,
       );
@@ -218,9 +292,14 @@ class _PhotoUploadScreenState extends State<PhotoUploadScreen> {
 
       // If it's an uploaded photo, delete from server
       if (photoSlot.photoResponse != null) {
+        if (_effectiveAuthToken == null) {
+          _showStatusMessage('Authentication required', isError: true);
+          return;
+        }
+
         final success = await _photoService.deletePhoto(
           photoId: photoSlot.photoResponse!.id,
-          authToken: widget.authToken,
+          authToken: _effectiveAuthToken!,
         );
 
         if (success) {
@@ -286,6 +365,16 @@ class _PhotoUploadScreenState extends State<PhotoUploadScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Show demo error state if initialization failed
+    if (widget.isDemoMode && !_demoInitialized && !isLoading) {
+      return _buildDemoErrorState();
+    }
+
+    // Show loading state during demo initialization
+    if (widget.isDemoMode && !_demoInitialized && isLoading) {
+      return _buildDemoLoadingState();
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Add Photos'),
@@ -295,6 +384,9 @@ class _PhotoUploadScreenState extends State<PhotoUploadScreen> {
       ),
       body: Column(
         children: [
+          // Demo header (if in demo mode)
+          if (widget.isDemoMode) _buildDemoHeader(),
+
           // Progress indicator and requirements
           _buildRequirementsHeader(),
 
@@ -707,6 +799,11 @@ class _PhotoUploadScreenState extends State<PhotoUploadScreen> {
   }
 
   Future<void> _setPrimaryPhoto(int slotIndex) async {
+    if (_effectiveAuthToken == null) {
+      _showStatusMessage('Authentication required', isError: true);
+      return;
+    }
+
     final photoSlot = photoSlots[slotIndex];
     if (photoSlot.isEmpty || photoSlot.photoResponse == null) return;
 
@@ -716,7 +813,7 @@ class _PhotoUploadScreenState extends State<PhotoUploadScreen> {
       // Update the photo to be primary
       final updatedPhoto = await _photoService.updatePhoto(
         photoId: photoSlot.photoResponse!.id,
-        authToken: widget.authToken,
+        authToken: _effectiveAuthToken!,
         isPrimary: true,
       );
 
@@ -802,6 +899,138 @@ class _PhotoUploadScreenState extends State<PhotoUploadScreen> {
         statusMessage!,
         textAlign: TextAlign.center,
         style: const TextStyle(fontSize: 14),
+      ),
+    );
+  }
+
+  // Demo-specific UI methods
+  Widget _buildDemoHeader() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      color: Colors.orange.shade100,
+      child: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Icon(Icons.science, color: Colors.orange.shade700),
+                const SizedBox(width: 8),
+                Text(
+                  'PHOTO UPLOAD DEMO',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.orange.shade700,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Logged in as Erik Astrom (Demo User)',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.orange.shade600,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'PhotoService: ${EnvironmentConfig.settings.photoServiceUrl}',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.orange.shade600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDemoLoadingState() {
+    return Scaffold(
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(color: Colors.pink),
+            const SizedBox(height: 16),
+            const Text('Initializing photo upload demo...'),
+            const SizedBox(height: 8),
+            Text(
+              statusMessage ?? 'Checking PhotoService connection...',
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDemoErrorState() {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Photo Upload Demo'),
+        backgroundColor: Colors.red,
+        foregroundColor: Colors.white,
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error, size: 64, color: Colors.red),
+              const SizedBox(height: 16),
+              const Text(
+                'Demo Setup Error',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                _demoError ?? 'Unknown error occurred',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 14),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    isLoading = true;
+                    _demoError = null;
+                  });
+                  _initializeDemoMode();
+                },
+                child: const Text('Retry'),
+              ),
+              const SizedBox(height: 16),
+              Card(
+                color: Colors.blue.shade50,
+                child: const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Setup Instructions:',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      SizedBox(height: 8),
+                      Text('1. Start PhotoService:'),
+                      Text('   cd /home/m/development/DatingApp'),
+                      Text('   ./dev-start.sh'),
+                      SizedBox(height: 8),
+                      Text('2. Ensure demo backend is running:'),
+                      Text('   All services on ports 8080-8087'),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

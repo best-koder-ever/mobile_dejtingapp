@@ -4,7 +4,8 @@ import 'config/environment.dart';
 class ApiUrls {
   static String get authService => EnvironmentConfig.settings.authServiceUrl;
   static String get userService => EnvironmentConfig.settings.userServiceUrl;
-  static String get matchmakingService => EnvironmentConfig.settings.matchmakingServiceUrl;
+  static String get matchmakingService =>
+      EnvironmentConfig.settings.matchmakingServiceUrl;
   static String get swipeService => EnvironmentConfig.settings.swipeServiceUrl;
   static String get gateway => EnvironmentConfig.settings.gatewayUrl;
 }
