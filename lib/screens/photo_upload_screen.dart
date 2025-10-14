@@ -1,23 +1,25 @@
 import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:file_picker/file_picker.dart';
 import '../services/photo_service.dart';
-import '../services/demo_service.dart';
-import '../config/environment.dart';
+import '../services/cached_photo_service.dart';
+import '../services/api_service.dart' show AppState;
+import '../utils/jwt_utils.dart';
 
 class PhotoUploadScreen extends StatefulWidget {
-  final String? authToken; // Made optional for demo mode
-  final int? userId; // Made optional for demo mode
+  final String? authToken;
+  final int? userId;
   final Function(bool isComplete) onPhotoRequirementMet;
-  final bool isDemoMode; // New parameter to enable demo features
 
   const PhotoUploadScreen({
     Key? key,
     this.authToken,
     this.userId,
     required this.onPhotoRequirementMet,
-    this.isDemoMode = false, // Default to production mode
   }) : super(key: key);
 
   @override
@@ -26,17 +28,15 @@ class PhotoUploadScreen extends StatefulWidget {
 
 class _PhotoUploadScreenState extends State<PhotoUploadScreen> {
   final PhotoService _photoService = PhotoService();
+  final CachedPhotoService _cachedPhotoService = CachedPhotoService();
   final ImagePicker _picker = ImagePicker();
 
   List<PhotoSlot> photoSlots = [];
   bool isLoading = false;
   String? statusMessage;
 
-  // Demo mode state
   String? _effectiveAuthToken;
   int? _effectiveUserId;
-  bool _demoInitialized = false;
-  String? _demoError;
 
   static const int minPhotos = 4;
   static const int maxPhotos = 6;
@@ -45,62 +45,92 @@ class _PhotoUploadScreenState extends State<PhotoUploadScreen> {
   void initState() {
     super.initState();
     _initializePhotoSlots();
-    if (widget.isDemoMode) {
-      _initializeDemoMode();
-    } else {
-      _effectiveAuthToken = widget.authToken;
-      _effectiveUserId = widget.userId;
-      _demoInitialized = true;
-      _loadExistingPhotos();
-    }
+    _initializeAuthenticatedMode();
   }
 
-  Future<void> _initializeDemoMode() async {
+  Future<void> _initializeAuthenticatedMode() async {
     setState(() {
       isLoading = true;
-      statusMessage = 'Initializing demo mode...';
+      statusMessage = 'Preparing your photo library...';
     });
 
     try {
-      // Check if PhotoService is running
-      final isServiceHealthy = await _photoService.isServiceHealthy();
-      if (!isServiceHealthy) {
+      final appState = AppState();
+      await appState.initialize();
+
+      int? userId = widget.userId;
+      String? token = widget.authToken;
+
+      if (token == null || token.isEmpty) {
+        token = await appState.getOrRefreshAuthToken();
+      } else if (JwtUtils.isExpired(token,
+          gracePeriod: const Duration(minutes: 2))) {
+        token = await appState.getOrRefreshAuthToken();
+      }
+
+      userId ??= int.tryParse(appState.userId ?? '');
+
+      if (!mounted) return;
+
+      if (token == null || token.isEmpty || userId == null) {
         setState(() {
-          _demoError =
-              'PhotoService not running on port 8085.\nPlease start it with: ./dev-start.sh';
+          _effectiveAuthToken = null;
+          _effectiveUserId = userId;
           isLoading = false;
-          _demoInitialized = false;
+          statusMessage = 'Authentication required. Please log in again.';
         });
         return;
       }
 
-      // Auto-login with demo user
-      final result =
-          await DemoService.loginWithDemoUser('erik.astrom@demo.com');
+      setState(() {
+        _effectiveAuthToken = token;
+        _effectiveUserId = userId;
+        statusMessage = null;
+      });
 
-      if (result.success && result.token != null) {
+      await _loadExistingPhotos();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        isLoading = false;
+        statusMessage = 'Failed to initialize photo uploader: $e';
+      });
+    } finally {
+      if (mounted) {
         setState(() {
-          _effectiveAuthToken = result.token;
-          _effectiveUserId = 1; // Default to user ID 1 for demo
-          _demoInitialized = true;
           isLoading = false;
-          statusMessage = 'Demo initialized successfully';
-        });
-        _loadExistingPhotos();
-      } else {
-        setState(() {
-          _demoError = 'Failed to login with demo user: ${result.message}';
-          isLoading = false;
-          _demoInitialized = false;
         });
       }
-    } catch (e) {
-      setState(() {
-        _demoError = 'Demo initialization failed: $e';
-        isLoading = false;
-        _demoInitialized = false;
-      });
     }
+  }
+
+  bool _ensureAuthenticatedUser() {
+    final hasToken =
+        _effectiveAuthToken != null && _effectiveAuthToken!.isNotEmpty;
+    final hasUser = _effectiveUserId != null;
+    if (hasToken && hasUser) {
+      return true;
+    }
+
+    if (!mounted) {
+      return false;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Please log in to manage your photos.'),
+        backgroundColor: Colors.red,
+      ),
+    );
+
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (mounted) {
+        Navigator.of(context)
+            .pushNamedAndRemoveUntil('/login', (route) => false);
+      }
+    });
+
+    return false;
   }
 
   void _initializePhotoSlots() {
@@ -129,16 +159,57 @@ class _PhotoUploadScreenState extends State<PhotoUploadScreen> {
 
       if (userPhotos != null) {
         setState(() {
-          // Update slots with existing photos
+          final updatedSlots = List.generate(maxPhotos, (index) {
+            final existingSlot =
+                index < photoSlots.length ? photoSlots[index] : null;
+
+            final hasLocalData = existingSlot?.localFile != null ||
+                existingSlot?.localImageBytes != null;
+
+            return PhotoSlot(
+              index: index,
+              isEmpty: existingSlot == null && !hasLocalData,
+              isPrimary: existingSlot?.isPrimary ?? index == 0,
+              photoResponse: existingSlot?.photoResponse,
+              localFile: existingSlot?.localFile,
+              localImageBytes: existingSlot?.localImageBytes,
+              cacheKey: existingSlot?.cacheKey,
+            );
+          });
+
           for (int i = 0; i < userPhotos.photos.length && i < maxPhotos; i++) {
             final photo = userPhotos.photos[i];
-            photoSlots[i] = PhotoSlot(
+            final existingSlot = updatedSlots[i];
+
+            updatedSlots[i] = PhotoSlot(
               index: i,
               isEmpty: false,
               photoResponse: photo,
               isPrimary: photo.isPrimary,
+              localFile: existingSlot.localFile,
+              localImageBytes: existingSlot.localImageBytes,
+              cacheKey: existingSlot.cacheKey,
             );
           }
+
+          // Ensure slots without server photos but with local data stay marked as filled
+          for (int i = 0; i < updatedSlots.length; i++) {
+            final slot = updatedSlots[i];
+            if (slot.photoResponse == null &&
+                (slot.localFile != null || slot.localImageBytes != null)) {
+              updatedSlots[i] = PhotoSlot(
+                index: slot.index,
+                isEmpty: false,
+                photoResponse: null,
+                isPrimary: slot.isPrimary,
+                localFile: slot.localFile,
+                localImageBytes: slot.localImageBytes,
+                cacheKey: slot.cacheKey,
+              );
+            }
+          }
+
+          photoSlots = updatedSlots;
           _checkPhotoRequirements();
         });
       }
@@ -150,7 +221,10 @@ class _PhotoUploadScreenState extends State<PhotoUploadScreen> {
   }
 
   int get uploadedPhotosCount => photoSlots
-      .where((slot) => !slot.isEmpty || slot.localFile != null)
+      .where((slot) =>
+          !slot.isEmpty ||
+          slot.localFile != null ||
+          slot.localImageBytes != null)
       .length;
   bool get meetsMinimumRequirement => uploadedPhotosCount >= minPhotos;
   bool get hasReachedMaximum => uploadedPhotosCount >= maxPhotos;
@@ -160,8 +234,63 @@ class _PhotoUploadScreenState extends State<PhotoUploadScreen> {
   }
 
   Future<void> _pickPhoto(int slotIndex) async {
+    if (!_ensureAuthenticatedUser()) {
+      return;
+    }
+
     try {
-      // Show photo source selection
+      if (!kIsWeb &&
+          (Platform.isLinux || Platform.isMacOS || Platform.isWindows)) {
+        final result = await FilePicker.platform.pickFiles(
+          type: FileType.image,
+          allowMultiple: false,
+          withData: true,
+        );
+
+        if (result == null || result.files.isEmpty) {
+          return;
+        }
+
+        final picked = result.files.single;
+        final bool isPrimary = photoSlots[slotIndex].isPrimary;
+
+        if (picked.bytes != null) {
+          final Uint8List imageBytes = picked.bytes!;
+          setState(() {
+            photoSlots[slotIndex] = PhotoSlot(
+              index: slotIndex,
+              isEmpty: false,
+              isPrimary: isPrimary,
+              localImageBytes: imageBytes,
+            );
+          });
+
+          await _uploadPhotoFromBytes(
+            imageBytes,
+            slotIndex,
+            fileName: picked.name,
+          );
+        } else if (picked.path != null) {
+          final imageFile = File(picked.path!);
+          setState(() {
+            photoSlots[slotIndex] = PhotoSlot(
+              index: slotIndex,
+              isEmpty: false,
+              isPrimary: isPrimary,
+              localFile: imageFile,
+            );
+          });
+
+          await _uploadPhotoFromFile(
+            imageFile,
+            slotIndex,
+          );
+        }
+
+        return;
+      }
+
+      // Mobile & web flow remains unchanged
       final source = await _showPhotoSourceDialog();
       if (source == null) return;
 
@@ -173,20 +302,42 @@ class _PhotoUploadScreenState extends State<PhotoUploadScreen> {
       );
 
       if (image != null) {
-        final imageFile = File(image.path);
+        final bool isPrimary = photoSlots[slotIndex].isPrimary;
 
-        // Immediately show the picked image locally
-        setState(() {
-          photoSlots[slotIndex] = PhotoSlot(
-            index: slotIndex,
-            isEmpty: false,
-            isPrimary: photoSlots[slotIndex].isPrimary,
-            localFile: imageFile, // Show locally first
+        if (kIsWeb) {
+          final Uint8List imageBytes = await image.readAsBytes();
+
+          setState(() {
+            photoSlots[slotIndex] = PhotoSlot(
+              index: slotIndex,
+              isEmpty: false,
+              isPrimary: isPrimary,
+              localImageBytes: imageBytes,
+            );
+          });
+
+          await _uploadPhotoFromBytes(
+            imageBytes,
+            slotIndex,
+            fileName: image.name,
           );
-        });
+        } else {
+          final imageFile = File(image.path);
 
-        // Then upload in the background
-        await _uploadPhoto(imageFile, slotIndex);
+          setState(() {
+            photoSlots[slotIndex] = PhotoSlot(
+              index: slotIndex,
+              isEmpty: false,
+              isPrimary: isPrimary,
+              localFile: imageFile,
+            );
+          });
+
+          await _uploadPhotoFromFile(
+            imageFile,
+            slotIndex,
+          );
+        }
       }
     } catch (e) {
       _showStatusMessage('Failed to pick photo: $e');
@@ -217,7 +368,10 @@ class _PhotoUploadScreenState extends State<PhotoUploadScreen> {
     );
   }
 
-  Future<void> _uploadPhoto(File imageFile, int slotIndex) async {
+  Future<void> _uploadPhotoFromFile(
+    File imageFile,
+    int slotIndex,
+  ) async {
     if (_effectiveAuthToken == null) {
       _showStatusMessage('Authentication required', isError: true);
       return;
@@ -225,42 +379,112 @@ class _PhotoUploadScreenState extends State<PhotoUploadScreen> {
 
     setState(() {
       isLoading = true;
-      statusMessage = 'Uploading photo...';
+      statusMessage = 'Processing photo...';
     });
 
     try {
-      final result = await _photoService.uploadPhoto(
+      final bool isPrimary = photoSlots[slotIndex].isPrimary;
+
+      // Use the smart caching service for Tinder-like behavior
+      final result = await _cachedPhotoService.uploadPhotoWithCache(
         imageFile: imageFile,
         authToken: _effectiveAuthToken!,
-        isPrimary: photoSlots[slotIndex].isPrimary,
+        isPrimary: isPrimary,
         displayOrder: slotIndex + 1,
       );
 
-      if (result.success && result.photo != null) {
+      if (result.success) {
+        // Immediately show the photo from cache
         setState(() {
           photoSlots[slotIndex] = PhotoSlot(
             index: slotIndex,
             isEmpty: false,
-            photoResponse: result.photo!,
-            isPrimary: result.photo!.isPrimary,
-            localFile: null, // Clear local file after successful upload
+            photoResponse:
+                result.photo, // Will have server photo if upload completed
+            isPrimary: isPrimary,
+            localFile: imageFile, // Keep local file for immediate display
+            cacheKey: result.localCachePath, // Store cache path for retrieval
           );
           _checkPhotoRequirements();
         });
 
         _showStatusMessage(
-          'Photo uploaded successfully! ${result.processingInfo?.wasResized == true ? '(Resized for optimization)' : ''}',
+          result.photo != null
+              ? 'Photo uploaded successfully!'
+              : 'Photo ready! Background upload in progress...',
           isError: false,
         );
       } else {
-        // Keep the local file if upload fails
-        _showStatusMessage(
-            'Upload failed: ${result.errorMessage}. Photo kept locally for now.');
+        _showStatusMessage('Failed to process photo: ${result.errorMessage}',
+            isError: true);
       }
     } catch (e) {
-      // Keep the local file if upload fails
-      _showStatusMessage('Upload failed: $e. Photo kept locally for now.');
-      print('Photo upload error: $e'); // Debug log
+      _showStatusMessage('Failed to process photo: $e', isError: true);
+      print('Photo processing error: $e'); // Debug log
+    } finally {
+      setState(() => isLoading = false);
+    }
+  }
+
+  Future<void> _uploadPhotoFromBytes(
+    Uint8List imageBytes,
+    int slotIndex, {
+    String? fileName,
+  }) async {
+    if (_effectiveAuthToken == null) {
+      _showStatusMessage('Authentication required', isError: true);
+      return;
+    }
+
+    setState(() {
+      isLoading = true;
+      statusMessage = 'Processing photo...';
+    });
+
+    try {
+      final bool isPrimary = photoSlots[slotIndex].isPrimary;
+
+      final uploadResult = await _photoService.uploadPhoto(
+        imageBytes: imageBytes,
+        fileName: fileName,
+        authToken: _effectiveAuthToken!,
+        isPrimary: isPrimary,
+        displayOrder: slotIndex + 1,
+      );
+
+      if (uploadResult.success && uploadResult.photo != null) {
+        setState(() {
+          photoSlots[slotIndex] = PhotoSlot(
+            index: slotIndex,
+            isEmpty: false,
+            photoResponse: uploadResult.photo,
+            isPrimary: uploadResult.photo!.isPrimary,
+            localImageBytes: imageBytes,
+          );
+          _checkPhotoRequirements();
+        });
+
+        _showStatusMessage('Photo uploaded successfully!', isError: false);
+        await _loadExistingPhotos();
+      } else {
+        setState(() {
+          photoSlots[slotIndex] = PhotoSlot(
+            index: slotIndex,
+            isEmpty: false,
+            isPrimary: isPrimary,
+            localImageBytes: imageBytes,
+          );
+        });
+
+        _showStatusMessage(
+          uploadResult.errorMessage != null
+              ? 'Failed to upload photo: ${uploadResult.errorMessage}'
+              : 'Failed to upload photo',
+        );
+      }
+    } catch (e) {
+      _showStatusMessage('Failed to process photo: $e', isError: true);
+      print('Photo processing error (web): $e');
     } finally {
       setState(() => isLoading = false);
     }
@@ -268,7 +492,11 @@ class _PhotoUploadScreenState extends State<PhotoUploadScreen> {
 
   Future<void> _deletePhoto(int slotIndex) async {
     final photoSlot = photoSlots[slotIndex];
-    if (photoSlot.isEmpty && photoSlot.localFile == null) return;
+    if (photoSlot.isEmpty &&
+        photoSlot.localFile == null &&
+        photoSlot.localImageBytes == null) {
+      return;
+    }
 
     final confirmed = await _showDeleteConfirmation();
     if (!confirmed) return;
@@ -277,7 +505,8 @@ class _PhotoUploadScreenState extends State<PhotoUploadScreen> {
 
     try {
       // If it's just a local file, delete immediately
-      if (photoSlot.localFile != null && photoSlot.photoResponse == null) {
+      if ((photoSlot.localFile != null || photoSlot.localImageBytes != null) &&
+          photoSlot.photoResponse == null) {
         setState(() {
           photoSlots[slotIndex] = PhotoSlot(
             index: slotIndex,
@@ -365,16 +594,6 @@ class _PhotoUploadScreenState extends State<PhotoUploadScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Show demo error state if initialization failed
-    if (widget.isDemoMode && !_demoInitialized && !isLoading) {
-      return _buildDemoErrorState();
-    }
-
-    // Show loading state during demo initialization
-    if (widget.isDemoMode && !_demoInitialized && isLoading) {
-      return _buildDemoLoadingState();
-    }
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Add Photos'),
@@ -384,9 +603,6 @@ class _PhotoUploadScreenState extends State<PhotoUploadScreen> {
       ),
       body: Column(
         children: [
-          // Demo header (if in demo mode)
-          if (widget.isDemoMode) _buildDemoHeader(),
-
           // Progress indicator and requirements
           _buildRequirementsHeader(),
 
@@ -499,7 +715,9 @@ class _PhotoUploadScreenState extends State<PhotoUploadScreen> {
       onTap: isLoading
           ? null
           : () {
-              if (slot.isEmpty && slot.localFile == null) {
+              if (slot.isEmpty &&
+                  slot.localFile == null &&
+                  slot.localImageBytes == null) {
                 _pickPhoto(index);
               } else {
                 _showPhotoOptions(index);
@@ -525,7 +743,9 @@ class _PhotoUploadScreenState extends State<PhotoUploadScreen> {
           child: Stack(
             children: [
               // Photo or placeholder
-              if (slot.isEmpty && slot.localFile == null)
+              if (slot.isEmpty &&
+                  slot.localFile == null &&
+                  slot.localImageBytes == null)
                 _buildEmptySlot(index)
               else
                 _buildPhotoSlotContent(slot),
@@ -637,6 +857,28 @@ class _PhotoUploadScreenState extends State<PhotoUploadScreen> {
               ),
             ),
           )
+        else if (slot.localImageBytes != null)
+          Image.memory(
+            slot.localImageBytes!,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => Container(
+              color: Colors.grey.shade300,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.broken_image, color: Colors.grey.shade600),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Local Image Error',
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
         else if (slot.photoResponse != null)
           // Show network image after upload
           CachedNetworkImage(
@@ -709,7 +951,7 @@ class _PhotoUploadScreenState extends State<PhotoUploadScreen> {
               ),
             ),
           )
-        else if (slot.localFile != null)
+        else if (slot.localFile != null || slot.localImageBytes != null)
           // Show "uploading" indicator for local files
           Positioned(
             bottom: 0,
@@ -827,6 +1069,9 @@ class _PhotoUploadScreenState extends State<PhotoUploadScreen> {
                 isEmpty: false,
                 photoResponse: updatedPhoto,
                 isPrimary: true,
+                localFile: photoSlots[i].localFile,
+                localImageBytes: photoSlots[i].localImageBytes,
+                cacheKey: photoSlots[i].cacheKey,
               );
             } else if (!photoSlots[i].isEmpty) {
               photoSlots[i] = PhotoSlot(
@@ -834,6 +1079,9 @@ class _PhotoUploadScreenState extends State<PhotoUploadScreen> {
                 isEmpty: false,
                 photoResponse: photoSlots[i].photoResponse!,
                 isPrimary: false,
+                localFile: photoSlots[i].localFile,
+                localImageBytes: photoSlots[i].localImageBytes,
+                cacheKey: photoSlots[i].cacheKey,
               );
             }
           }
@@ -902,138 +1150,6 @@ class _PhotoUploadScreenState extends State<PhotoUploadScreen> {
       ),
     );
   }
-
-  // Demo-specific UI methods
-  Widget _buildDemoHeader() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      color: Colors.orange.shade100,
-      child: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Icon(Icons.science, color: Colors.orange.shade700),
-                const SizedBox(width: 8),
-                Text(
-                  'PHOTO UPLOAD DEMO',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.orange.shade700,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Logged in as Erik Astrom (Demo User)',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.orange.shade600,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'PhotoService: ${EnvironmentConfig.settings.photoServiceUrl}',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.orange.shade600,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDemoLoadingState() {
-    return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const CircularProgressIndicator(color: Colors.pink),
-            const SizedBox(height: 16),
-            const Text('Initializing photo upload demo...'),
-            const SizedBox(height: 8),
-            Text(
-              statusMessage ?? 'Checking PhotoService connection...',
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDemoErrorState() {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Photo Upload Demo'),
-        backgroundColor: Colors.red,
-        foregroundColor: Colors.white,
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error, size: 64, color: Colors.red),
-              const SizedBox(height: 16),
-              const Text(
-                'Demo Setup Error',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                _demoError ?? 'Unknown error occurred',
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 14),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () {
-                  setState(() {
-                    isLoading = true;
-                    _demoError = null;
-                  });
-                  _initializeDemoMode();
-                },
-                child: const Text('Retry'),
-              ),
-              const SizedBox(height: 16),
-              Card(
-                color: Colors.blue.shade50,
-                child: const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Setup Instructions:',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      SizedBox(height: 8),
-                      Text('1. Start PhotoService:'),
-                      Text('   cd /home/m/development/DatingApp'),
-                      Text('   ./dev-start.sh'),
-                      SizedBox(height: 8),
-                      Text('2. Ensure demo backend is running:'),
-                      Text('   All services on ports 8080-8087'),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 /// Photo slot data class
@@ -1043,6 +1159,8 @@ class PhotoSlot {
   final PhotoResponse? photoResponse;
   final bool isPrimary;
   final File? localFile; // Add local file for immediate display
+  final String? cacheKey; // Add cache key for smart caching
+  final Uint8List? localImageBytes; // Web compat local bytes
 
   PhotoSlot({
     required this.index,
@@ -1050,5 +1168,7 @@ class PhotoSlot {
     this.photoResponse,
     required this.isPrimary,
     this.localFile,
+    this.cacheKey,
+    this.localImageBytes,
   });
 }

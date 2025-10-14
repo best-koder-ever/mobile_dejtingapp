@@ -3,7 +3,7 @@ import 'swipe_screen.dart';
 import 'profile_screen.dart';
 import 'matches_screen.dart';
 import 'api_services.dart';
-import 'login_screen.dart';
+import 'screens/auth_screens.dart';
 import 'models.dart';
 
 class HomeScreen extends StatefulWidget {

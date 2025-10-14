@@ -6,12 +6,21 @@ import 'package:http/http.dart' as http;
 
 import 'backend_url.dart';
 import 'models.dart';
+import 'services/api_service.dart' as session;
+import 'services/auth_session_manager.dart';
 
 // Base API service with common functionality
 abstract class BaseApiService {
   final _storage = const FlutterSecureStorage();
 
-  Future<String?> getAuthToken() async {
+  Future<String?> getAuthToken({bool allowRefresh = true}) async {
+    if (allowRefresh) {
+      final token = await session.AppState().getOrRefreshAuthToken();
+      if (token != null && token.trim().isNotEmpty) {
+        return token;
+      }
+    }
+
     return await _storage.read(key: 'jwt');
   }
 
@@ -52,84 +61,62 @@ class ApiException implements Exception {
 
 // Authentication API Service
 class AuthApiService extends BaseApiService {
-  final String baseUrl = ApiUrls.authService; // Use direct auth service
-
   Future<String> register({
     required String username,
     required String email,
     required String password,
+    String? firstName,
+    String? lastName,
     String? phoneNumber,
   }) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/api/auth/register'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'username': username,
-        'email': email,
-        'password': password,
-        'confirmPassword': password, // Same as password for simplicity
-        'phoneNumber': phoneNumber ?? '', // Provide empty string if null
-      }),
+    throw ApiException(
+      statusCode: 501,
+      message:
+          'Registration is handled via the Keycloak portal. Please use the in-app link to create an account.',
     );
-
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      final data = jsonDecode(response.body);
-      final token = data['token'];
-
-      // Store token securely
-      await _storage.write(key: 'jwt', value: token);
-      await _storage.write(key: 'email', value: email);
-      await _storage.write(key: 'username', value: username);
-
-      return token;
-    } else {
-      throw ApiException(
-        statusCode: response.statusCode,
-        message: response.body,
-      );
-    }
   }
 
   Future<String> login({
     required String email,
     required String password,
   }) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/api/auth/login'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email, 'password': password}),
+    final result = await AuthSessionManager.login(
+      username: email,
+      password: password,
     );
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      final token = data['token'];
-
-      // Store token securely
-      await _storage.write(key: 'jwt', value: token);
-      await _storage.write(key: 'email', value: email);
-
-      return token;
-    } else {
+    if (!result.success) {
       throw ApiException(
-        statusCode: response.statusCode,
-        message: response.body,
+        statusCode: 401,
+        message: result.message ?? 'Login failed',
       );
     }
+
+    final token = await getAuthToken();
+    if (token == null || token.isEmpty) {
+      throw ApiException(
+        statusCode: 500,
+        message: 'Unable to retrieve access token after login.',
+      );
+    }
+
+    return token;
   }
 
   Future<void> logout() async {
-    await _storage.deleteAll();
+    await session.AppState().logout();
   }
 
   Future<bool> isLoggedIn() async {
-    final token = await getAuthToken();
-    return token != null;
+    await session.AppState().initialize();
+    return session.AppState().userId != null;
   }
 }
 
 // User Profile API Service
 class UserApiService extends BaseApiService {
   final String baseUrl = ApiUrls.gateway; // Use YARP gateway
+  final FlutterSecureStorage _userStorage = const FlutterSecureStorage();
 
   Future<UserProfile> createProfile(UserProfile profile) async {
     final headers = await getAuthHeaders();
@@ -143,13 +130,15 @@ class UserApiService extends BaseApiService {
   }
 
   Future<UserProfile> getMyProfile() async {
-    final headers = await getAuthHeaders();
-    final response = await http.get(
-      Uri.parse('$baseUrl/api/userprofiles/me'),
-      headers: headers,
-    );
+    final userId = await getCurrentUserId();
+    if (userId == null) {
+      throw ApiException(
+        statusCode: 400,
+        message: 'No cached userId available for profile lookup.',
+      );
+    }
 
-    return handleResponse(response, (data) => UserProfile.fromJson(data));
+    return await getProfileById(userId);
   }
 
   Future<UserProfile> updateProfile(UserProfile profile) async {
@@ -165,17 +154,22 @@ class UserApiService extends BaseApiService {
 
   Future<List<UserProfile>> searchProfiles(SearchFilters filters) async {
     final headers = await getAuthHeaders();
-    final queryParams = filters.toQueryParams();
-    final uri = Uri.parse(
-      '$baseUrl/api/userprofiles/search',
-    ).replace(queryParameters: queryParams);
-
-    final response = await http.get(uri, headers: headers);
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/userprofiles/search'),
+      headers: headers,
+      body: jsonEncode(filters.toJson()),
+    );
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      final results = data['results'] as List;
-      return results.map((json) => UserProfile.fromJson(json)).toList();
+      final results = data['results'] ?? data['Results'];
+      if (results is List) {
+        return results
+            .map<UserProfile>(
+                (json) => UserProfile.fromJson(Map<String, dynamic>.from(json)))
+            .toList();
+      }
+      return const [];
     } else {
       throw ApiException(
         statusCode: response.statusCode,
@@ -229,30 +223,25 @@ class UserApiService extends BaseApiService {
   }
 
   Future<List<UserProfile>> getAllProfiles() async {
+    return await searchProfiles(const SearchFilters());
+  }
+
+  Future<UserProfile> getProfileById(String userId) async {
     final headers = await getAuthHeaders();
     final response = await http.get(
-      Uri.parse('$baseUrl/api/userprofiles'),
+      Uri.parse('$baseUrl/api/userprofiles/$userId'),
       headers: headers,
     );
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body) as List;
-      return data.map((json) => UserProfile.fromJson(json)).toList();
-    } else {
-      throw ApiException(
-        statusCode: response.statusCode,
-        message: response.body,
-      );
-    }
+    return handleResponse(response, (data) => UserProfile.fromJson(data));
   }
 
   Future<String?> getCurrentUserId() async {
-    try {
-      final profile = await getMyProfile();
-      return profile.userId;
-    } catch (e) {
-      return null;
+    final storedUserId = await _userStorage.read(key: 'userId');
+    if (storedUserId != null && storedUserId.isNotEmpty) {
+      return storedUserId;
     }
+    return null;
   }
 }
 
@@ -261,32 +250,78 @@ class SwipeApiService extends BaseApiService {
   final String baseUrl = ApiUrls.gateway; // Use YARP gateway
 
   Future<SwipeResponse> swipe({
+    required String userId,
     required String targetUserId,
     required bool isLike,
   }) async {
+    final parsedUserId = int.tryParse(userId);
+    final parsedTargetUserId = int.tryParse(targetUserId);
+
+    if (parsedUserId == null || parsedTargetUserId == null) {
+      throw ApiException(
+        statusCode: 400,
+        message: 'Swipe requires numeric user identifiers.',
+      );
+    }
+
     final headers = await getAuthHeaders();
     final response = await http.post(
-      Uri.parse('$baseUrl/api/swipes/swipe'),
+      Uri.parse('$baseUrl/api/swipes'),
       headers: headers,
-      body: jsonEncode({'targetUserId': targetUserId, 'isLike': isLike}),
+      body: jsonEncode({
+        'userId': parsedUserId,
+        'targetUserId': parsedTargetUserId,
+        'isLike': isLike,
+      }),
     );
 
     return handleResponse(response, (data) => SwipeResponse.fromJson(data));
   }
 
   Future<List<SwipeResponse>> batchSwipe(
+    String userId,
     List<Map<String, dynamic>> swipes,
   ) async {
+    final parsedUserId = int.tryParse(userId);
+    if (parsedUserId == null) {
+      throw ApiException(
+        statusCode: 400,
+        message: 'Batch swipe requires a numeric userId.',
+      );
+    }
+
+    final parsedSwipes = swipes.map((swipe) {
+      final target = swipe['targetUserId']?.toString();
+      final parsedTarget = target != null ? int.tryParse(target) : null;
+      if (parsedTarget == null) {
+        throw ApiException(
+          statusCode: 400,
+          message: 'Each swipe action requires a numeric targetUserId.',
+        );
+      }
+      return {
+        'targetUserId': parsedTarget,
+        'isLike': swipe['isLike'] ?? false,
+      };
+    }).toList();
+
     final headers = await getAuthHeaders();
     final response = await http.post(
       Uri.parse('$baseUrl/api/swipes/batch'),
       headers: headers,
-      body: jsonEncode({'swipes': swipes}),
+      body: jsonEncode({'userId': parsedUserId, 'swipes': parsedSwipes}),
     );
 
     if (response.statusCode == 200) {
-      final data = jsonDecode(response.body) as List;
-      return data.map((json) => SwipeResponse.fromJson(json)).toList();
+      final data = jsonDecode(response.body);
+      final responses = data['responses'] ?? data['Responses'];
+      if (responses is List) {
+        return responses
+            .map<SwipeResponse>((json) =>
+                SwipeResponse.fromJson(Map<String, dynamic>.from(json)))
+            .toList();
+      }
+      return const [];
     } else {
       throw ApiException(
         statusCode: response.statusCode,
@@ -295,10 +330,18 @@ class SwipeApiService extends BaseApiService {
     }
   }
 
-  Future<List<dynamic>> getSwipeHistory() async {
+  Future<List<dynamic>> getSwipeHistory(String userId) async {
+    final parsedUserId = int.tryParse(userId);
+    if (parsedUserId == null) {
+      throw ApiException(
+        statusCode: 400,
+        message: 'Swipe history requires a numeric userId.',
+      );
+    }
+
     final headers = await getAuthHeaders();
     final response = await http.get(
-      Uri.parse('$baseUrl/api/swipes/history'),
+      Uri.parse('$baseUrl/api/swipes/user/$parsedUserId'),
       headers: headers,
     );
 
@@ -313,9 +356,19 @@ class SwipeApiService extends BaseApiService {
   }
 
   Future<bool> checkMutualMatch(String userId1, String userId2) async {
+    final parsedUserId1 = int.tryParse(userId1);
+    final parsedUserId2 = int.tryParse(userId2);
+
+    if (parsedUserId1 == null || parsedUserId2 == null) {
+      throw ApiException(
+        statusCode: 400,
+        message: 'Mutual match checks require numeric user identifiers.',
+      );
+    }
+
     final headers = await getAuthHeaders();
     final response = await http.get(
-      Uri.parse('$baseUrl/api/swipes/match/$userId1/$userId2'),
+      Uri.parse('$baseUrl/api/swipes/match/$parsedUserId1/$parsedUserId2'),
       headers: headers,
     );
 
@@ -330,12 +383,24 @@ class SwipeApiService extends BaseApiService {
     }
   }
 
-  Future<void> unmatch(String matchId) async {
+  Future<void> unmatch({
+    required String userId,
+    required String targetUserId,
+  }) async {
+    final parsedUserId = int.tryParse(userId);
+    final parsedTargetUserId = int.tryParse(targetUserId);
+
+    if (parsedUserId == null || parsedTargetUserId == null) {
+      throw ApiException(
+        statusCode: 400,
+        message: 'Unmatch requires numeric user identifiers.',
+      );
+    }
+
     final headers = await getAuthHeaders();
     final response = await http.delete(
-      Uri.parse('$baseUrl/api/swipes/unmatch'),
+      Uri.parse('$baseUrl/api/swipes/match/$parsedUserId/$parsedTargetUserId'),
       headers: headers,
-      body: jsonEncode({'matchId': matchId}),
     );
 
     if (response.statusCode != 200) {
@@ -347,10 +412,15 @@ class SwipeApiService extends BaseApiService {
   }
 
   Future<SwipeResponse> recordSwipe({
+    required String userId,
     required String targetUserId,
     required bool isLike,
   }) async {
-    return await swipe(targetUserId: targetUserId, isLike: isLike);
+    return await swipe(
+      userId: userId,
+      targetUserId: targetUserId,
+      isLike: isLike,
+    );
   }
 }
 

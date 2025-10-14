@@ -34,7 +34,7 @@ class _MatchesScreenState extends State<MatchesScreen>
         _matches = [
           Match(
             id: '1',
-            userId1: 'demo_user',
+            userId1: 'current_user',
             userId2: '1',
             matchedAt: DateTime.now().subtract(const Duration(hours: 2)),
             otherUserProfile: UserProfile(
@@ -49,7 +49,7 @@ class _MatchesScreenState extends State<MatchesScreen>
           ),
           Match(
             id: '2',
-            userId1: 'demo_user',
+            userId1: 'current_user',
             userId2: '2',
             matchedAt: DateTime.now().subtract(const Duration(days: 1)),
             otherUserProfile: UserProfile(
@@ -64,7 +64,7 @@ class _MatchesScreenState extends State<MatchesScreen>
           ),
           Match(
             id: '3',
-            userId1: 'demo_user',
+            userId1: 'current_user',
             userId2: '3',
             matchedAt: DateTime.now().subtract(const Duration(days: 2)),
             otherUserProfile: UserProfile(
@@ -118,15 +118,14 @@ class _MatchesScreenState extends State<MatchesScreen>
           tabs: const [Tab(text: 'New Matches'), Tab(text: 'Messages')],
         ),
       ),
-      body:
-          _isLoading
-              ? const Center(
-                child: CircularProgressIndicator(color: Colors.pink),
-              )
-              : TabBarView(
-                controller: _tabController,
-                children: [_buildMatchesTab(), _buildMessagesTab()],
-              ),
+      body: _isLoading
+          ? const Center(
+              child: CircularProgressIndicator(color: Colors.pink),
+            )
+          : TabBarView(
+              controller: _tabController,
+              children: [_buildMatchesTab(), _buildMessagesTab()],
+            ),
     );
   }
 

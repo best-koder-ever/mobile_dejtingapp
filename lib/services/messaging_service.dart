@@ -3,11 +3,12 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:signalr_netcore/signalr_client.dart';
 import 'package:http/http.dart' as http;
+import '../backend_url.dart';
 import '../models.dart';
 
 class MessagingService {
-  static const String baseUrl = 'http://localhost:8086';
-  static const String hubUrl = '$baseUrl/messagingHub';
+  static String get baseUrl => ApiUrls.messagingService;
+  static String get hubUrl => '${ApiUrls.messagingService}/messagingHub';
 
   HubConnection? _hubConnection;
   final StreamController<Message> _messageController =

@@ -2,10 +2,11 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import '../backend_url.dart';
 import '../models.dart';
 
 class MessagingService {
-  static const String baseUrl = 'http://localhost:8086';
+  static String get baseUrl => ApiUrls.messagingService;
 
   final StreamController<Message> _messageController =
       StreamController<Message>.broadcast();
@@ -16,6 +17,7 @@ class MessagingService {
   String? _currentUserId;
   String? _authToken;
   Timer? _pollingTimer;
+  bool _hasConnectionIssue = false;
 
   // Streams for UI to listen to
   Stream<Message> get messageStream => _messageController.stream;
@@ -177,19 +179,22 @@ class MessagingService {
 
       if (response.statusCode == 200) {
         final List<dynamic> conversationsJson = json.decode(response.body);
+        _hasConnectionIssue = false;
         return conversationsJson
             .map((json) => ConversationSummary.fromJson(json))
             .toList();
       } else {
-        if (kDebugMode) {
+        if (!_hasConnectionIssue && kDebugMode) {
           print('❌ Failed to load conversations: ${response.statusCode}');
         }
+        _hasConnectionIssue = true;
         return [];
       }
     } catch (e) {
-      if (kDebugMode) {
+      if (!_hasConnectionIssue && kDebugMode) {
         print('❌ Error loading conversations: $e');
       }
+      _hasConnectionIssue = true;
       return [];
     }
   }
@@ -204,6 +209,7 @@ class MessagingService {
           'Content-Type': 'application/json',
         },
       );
+      _hasConnectionIssue = false;
 
       // Update local cache
       for (final conversation in _conversationCache.values) {
@@ -218,9 +224,10 @@ class MessagingService {
         }
       }
     } catch (e) {
-      if (kDebugMode) {
+      if (!_hasConnectionIssue && kDebugMode) {
         print('❌ Error marking message as read: $e');
       }
+      _hasConnectionIssue = true;
     }
   }
 

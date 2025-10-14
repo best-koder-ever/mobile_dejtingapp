@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 class PhotoGridCard extends StatelessWidget {
@@ -7,6 +8,7 @@ class PhotoGridCard extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback? onDelete;
   final bool isLoading;
+  final Map<String, String>? imageHeaders;
 
   const PhotoGridCard({
     Key? key,
@@ -16,6 +18,7 @@ class PhotoGridCard extends StatelessWidget {
     this.onTap,
     this.onDelete,
     this.isLoading = false,
+    this.imageHeaders,
   }) : super(key: key);
 
   @override
@@ -28,6 +31,7 @@ class PhotoGridCard extends StatelessWidget {
   }
 
   Widget _buildAddPhotoButton() {
+    debugPrint('➕ Rendering empty photo slot (loading: $isLoading)');
     return GestureDetector(
       onTap: isLoading ? null : onTap,
       child: Container(
@@ -72,6 +76,10 @@ class PhotoGridCard extends StatelessWidget {
   }
 
   Widget _buildPhotoCard() {
+    debugPrint(
+      '🖼️ PhotoGridCard rendering network image: $photoUrl '
+      '(main: $isMainPhoto, editing: $isEditing)',
+    );
     return Stack(
       children: [
         Container(
@@ -92,17 +100,21 @@ class PhotoGridCard extends StatelessWidget {
               fit: BoxFit.cover,
               width: double.infinity,
               height: double.infinity,
+              headers: imageHeaders,
               loadingBuilder: (context, child, loadingProgress) {
                 if (loadingProgress == null) return child;
+                debugPrint(
+                  '⏳ Loading image $photoUrl '
+                  '(${loadingProgress.cumulativeBytesLoaded}/${loadingProgress.expectedTotalBytes ?? -1} bytes)...',
+                );
                 return Container(
                   color: Colors.grey[200],
                   child: Center(
                     child: CircularProgressIndicator(
-                      value:
-                          loadingProgress.expectedTotalBytes != null
-                              ? loadingProgress.cumulativeBytesLoaded /
-                                  loadingProgress.expectedTotalBytes!
-                              : null,
+                      value: loadingProgress.expectedTotalBytes != null
+                          ? loadingProgress.cumulativeBytesLoaded /
+                              loadingProgress.expectedTotalBytes!
+                          : null,
                       strokeWidth: 2,
                       valueColor: const AlwaysStoppedAnimation<Color>(
                         Colors.pink,
@@ -112,6 +124,7 @@ class PhotoGridCard extends StatelessWidget {
                 );
               },
               errorBuilder: (context, error, stackTrace) {
+                debugPrint('❌ Failed to load image $photoUrl -> $error');
                 return Container(
                   color: Colors.grey[200],
                   child: Column(

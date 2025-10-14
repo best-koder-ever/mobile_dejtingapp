@@ -106,41 +106,124 @@ class UserProfile {
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
-    return UserProfile(
-      id: json['id']?.toString(),
-      userId: json['userId'].toString(),
-      firstName: json['firstName'] ?? '',
-      lastName: json['lastName'] ?? '',
-      dateOfBirth: DateTime.parse(json['dateOfBirth']),
-      bio: json['bio'],
-      city: json['city'],
-      occupation: json['occupation'],
-      interests:
-          json['interests'] != null ? List<String>.from(json['interests']) : [],
-      height: json['height'],
-      education: json['education'],
-      latitude: json['latitude']?.toDouble(),
-      longitude: json['longitude']?.toDouble(),
-      primaryPhotoUrl: json['primaryPhotoUrl'],
-      photoUrls:
-          json['photoUrls'] != null ? List<String>.from(json['photoUrls']) : [],
-      isVerified: json['isVerified'] ?? false,
-      isOnline: json['isOnline'] ?? false,
-      lastActiveAt: json['lastActiveAt'] != null
-          ? DateTime.parse(json['lastActiveAt'])
-          : null,
-      isActive: json['isActive'] ?? true,
-      lifestyle: json['lifestyle'],
-      relationshipGoals: json['relationshipGoals'],
-      isPremium: json['isPremium'] ?? false,
-      gender: json['gender'],
-      preferences: json['preferences'],
-      drinking: json['drinking'],
-      smoking: json['smoking'],
-      workout: json['workout'],
-      languages:
-          json['languages'] != null ? List<String>.from(json['languages']) : [],
+    final dynamic rawUserId =
+        json['userId'] ?? json['UserId'] ?? json['id'] ?? json['Id'];
+    final userId = rawUserId?.toString() ?? '';
+
+    final rawName = json['name'] ?? json['Name'] ?? '';
+    final firstName =
+        json['firstName'] ?? json['FirstName'] ?? _splitName(rawName).$1;
+    final lastName =
+        json['lastName'] ?? json['LastName'] ?? _splitName(rawName).$2;
+
+    final dob = _resolveBirthDate(
+      json['dateOfBirth'] ?? json['DateOfBirth'],
+      json['age'] ?? json['Age'],
     );
+
+    final interestsList = json['interests'] ?? json['Interests'];
+    final languagesList = json['languages'] ?? json['Languages'];
+    final photoUrls = _extractPhotoUrls(json);
+
+    return UserProfile(
+      id: json['id']?.toString() ?? json['Id']?.toString(),
+      userId: userId,
+      firstName: firstName,
+      lastName: lastName,
+      dateOfBirth: dob,
+      bio: json['bio'] ?? json['Bio'],
+      city: json['city'] ?? json['City'],
+      occupation: json['occupation'] ?? json['Occupation'],
+      interests: interestsList is List
+          ? interestsList.map((e) => e.toString()).toList()
+          : const [],
+      height: _toInt(json['height'] ?? json['Height']),
+      education: json['education'] ?? json['Education'],
+      latitude: _toDouble(json['latitude'] ?? json['Latitude']),
+      longitude: _toDouble(json['longitude'] ?? json['Longitude']),
+      primaryPhotoUrl: json['primaryPhotoUrl'] ??
+          json['PrimaryPhotoUrl'] ??
+          (photoUrls.isNotEmpty ? photoUrls.first : null),
+      photoUrls: photoUrls,
+      isVerified: json['isVerified'] ?? json['IsVerified'] ?? false,
+      isOnline: json['isOnline'] ?? json['IsOnline'] ?? false,
+      lastActiveAt: _parseDate(json['lastActiveAt'] ?? json['LastActiveAt']),
+      isActive: json['isActive'] ?? json['IsActive'] ?? true,
+      lifestyle: json['lifestyle'] ?? json['Lifestyle'],
+      relationshipGoals: json['relationshipGoals'] ?? json['RelationshipGoals'],
+      isPremium: json['isPremium'] ?? json['IsPremium'] ?? false,
+      gender: json['gender'] ?? json['Gender'],
+      preferences: json['preferences'] ?? json['Preferences'],
+      drinking: json['drinking'] ?? json['Drinking'],
+      smoking: json['smoking'] ?? json['Smoking'],
+      workout: json['workout'] ?? json['Workout'],
+      languages: languagesList is List
+          ? languagesList.map((e) => e.toString()).toList()
+          : const [],
+    );
+  }
+
+  static (String, String) _splitName(String fullName) {
+    if (fullName.trim().isEmpty) {
+      return ('', '');
+    }
+    final parts = fullName.trim().split(RegExp(r'\s+'));
+    if (parts.length == 1) {
+      return (parts.first, '');
+    }
+    final first = parts.first;
+    final last = parts.sublist(1).join(' ');
+    return (first, last);
+  }
+
+  static DateTime _resolveBirthDate(dynamic rawDate, dynamic rawAge) {
+    if (rawDate is String) {
+      final parsed = DateTime.tryParse(rawDate);
+      if (parsed != null) {
+        return parsed;
+      }
+    }
+
+    final age =
+        rawAge is num ? rawAge.toInt() : int.tryParse(rawAge?.toString() ?? '');
+    if (age != null && age > 0) {
+      final now = DateTime.now();
+      return DateTime(now.year - age, now.month, now.day);
+    }
+
+    return DateTime.now().subtract(const Duration(days: 25 * 365));
+  }
+
+  static List<String> _extractPhotoUrls(Map<String, dynamic> json) {
+    final photos = json['photoUrls'] ?? json['PhotoUrls'];
+    if (photos is List) {
+      return photos.map((e) => e.toString()).toList();
+    }
+
+    final urls = <String>[];
+    final primary = json['primaryPhotoUrl'] ?? json['PrimaryPhotoUrl'];
+    if (primary != null && primary.toString().isNotEmpty) {
+      urls.add(primary.toString());
+    }
+    return urls;
+  }
+
+  static DateTime? _parseDate(dynamic value) {
+    if (value == null) return null;
+    return DateTime.tryParse(value.toString());
+  }
+
+  static double? _toDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
+    return double.tryParse(value.toString());
+  }
+
+  static int? _toInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value.toString());
   }
 
   Map<String, dynamic> toJson() {
@@ -198,9 +281,9 @@ class SwipeResponse {
 
   factory SwipeResponse.fromJson(Map<String, dynamic> json) {
     return SwipeResponse(
-      isMatch: json['isMatch'] ?? false,
-      matchId: json['matchId'],
-      message: json['message'] ?? '',
+      isMatch: json['isMatch'] ?? json['isMutualMatch'] ?? false,
+      matchId: (json['matchId'] ?? json['MatchId'])?.toString(),
+      message: json['message'] ?? json['Message'] ?? '',
     );
   }
 }
@@ -275,7 +358,7 @@ class SearchFilters {
   final int page;
   final int pageSize;
 
-  SearchFilters({
+  const SearchFilters({
     this.minAge,
     this.maxAge,
     this.city,
@@ -286,19 +369,20 @@ class SearchFilters {
     this.pageSize = 10,
   });
 
-  Map<String, dynamic> toQueryParams() {
-    Map<String, dynamic> params = {
-      'page': page.toString(),
-      'pageSize': pageSize.toString(),
+  Map<String, dynamic> toJson() {
+    final map = <String, dynamic>{
+      'minAge': minAge,
+      'maxAge': maxAge,
+      'location': city,
+      'maxDistance': maxDistance,
+      if (interests != null && interests!.isNotEmpty) 'interests': interests,
+      'education': education,
+      'page': page,
+      'pageSize': pageSize,
     };
 
-    if (minAge != null) params['minAge'] = minAge.toString();
-    if (maxAge != null) params['maxAge'] = maxAge.toString();
-    if (city != null) params['city'] = city!;
-    if (maxDistance != null) params['maxDistance'] = maxDistance.toString();
-    if (education != null) params['education'] = education!;
-
-    return params;
+    map.removeWhere((key, value) => value == null);
+    return map;
   }
 }
 

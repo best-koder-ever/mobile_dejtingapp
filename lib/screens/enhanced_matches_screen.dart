@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import '../models.dart';
 import '../services/messaging_service_simple.dart';
+import '../services/api_service.dart' show AppState;
 import 'enhanced_chat_screen.dart';
 
 class EnhancedMatchesScreen extends StatefulWidget {
@@ -21,8 +22,8 @@ class _EnhancedMatchesScreenState extends State<EnhancedMatchesScreen>
   bool _isLoading = true;
   String _connectionStatus = 'Connecting...';
   Timer? _refreshTimer;
-  late StreamSubscription _messageSubscription;
-  late StreamSubscription _statusSubscription;
+  StreamSubscription<Message>? _messageSubscription;
+  StreamSubscription<String>? _statusSubscription;
 
   @override
   bool get wantKeepAlive => true;
@@ -31,7 +32,7 @@ class _EnhancedMatchesScreenState extends State<EnhancedMatchesScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _initializeMessaging();
+    unawaited(_initializeMessaging());
     _loadData();
     _startAutoRefresh();
   }
@@ -40,34 +41,54 @@ class _EnhancedMatchesScreenState extends State<EnhancedMatchesScreen>
   void dispose() {
     _tabController.dispose();
     _refreshTimer?.cancel();
-    _messageSubscription.cancel();
-    _statusSubscription.cancel();
+    _messageSubscription?.cancel();
+    _statusSubscription?.cancel();
     super.dispose();
   }
 
-  void _initializeMessaging() {
-    // Initialize messaging service (you'd get these from auth service)
-    final currentUserId = 'demo_user'; // Replace with actual user ID
-    final authToken = 'demo_token'; // Replace with actual JWT token
+  Future<void> _initializeMessaging() async {
+    try {
+      final appState = AppState();
+      await appState.initialize();
 
-    _messagingService.initialize(currentUserId, authToken);
+      final userId = appState.userId;
+      final authToken = await appState.getOrRefreshAuthToken(
+          gracePeriod: const Duration(minutes: 1));
 
-    // Listen to real-time messages
-    _messageSubscription = _messagingService.messageStream.listen((message) {
-      // Refresh conversations when new message arrives
-      _loadConversations();
+      if (!mounted) return;
 
-      // Show notification if app is in foreground
-      _showMessageNotification(message);
-    });
+      if (userId == null || authToken == null || authToken.isEmpty) {
+        setState(() {
+          _connectionStatus = 'Auth required';
+        });
+        return;
+      }
 
-    // Listen to connection status
-    _statusSubscription =
-        _messagingService.connectionStatusStream.listen((status) {
-      setState(() {
-        _connectionStatus = status;
+      await _messagingService.initialize(userId, authToken);
+
+      _messageSubscription = _messagingService.messageStream.listen((message) {
+        _loadConversations();
+        _showMessageNotification(message);
       });
-    });
+
+      _statusSubscription =
+          _messagingService.connectionStatusStream.listen((status) {
+        if (mounted) {
+          setState(() {
+            _connectionStatus = status;
+          });
+        }
+      });
+
+      setState(() {
+        _connectionStatus = 'Connected';
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _connectionStatus = 'Disconnected';
+      });
+    }
   }
 
   void _startAutoRefresh() {
@@ -153,15 +174,18 @@ class _EnhancedMatchesScreenState extends State<EnhancedMatchesScreen>
   }
 
   Future<void> _loadMatches() async {
-    // This would normally come from your matches API
-    // For demo purposes, using mock data
+    final appState = AppState();
+    await appState.initialize();
+    final currentUserId = appState.userId ?? 'current_user';
+
+    // Placeholder mock data until backend integration
     await Future.delayed(const Duration(milliseconds: 500));
 
     setState(() {
       _matches = [
         Match(
           id: '1',
-          userId1: 'demo_user',
+          userId1: currentUserId,
           userId2: '1',
           matchedAt: DateTime.now().subtract(const Duration(hours: 2)),
           otherUserProfile: UserProfile(
@@ -176,7 +200,7 @@ class _EnhancedMatchesScreenState extends State<EnhancedMatchesScreen>
         ),
         Match(
           id: '2',
-          userId1: 'demo_user',
+          userId1: currentUserId,
           userId2: '2',
           matchedAt: DateTime.now().subtract(const Duration(hours: 5)),
           otherUserProfile: UserProfile(
@@ -191,7 +215,7 @@ class _EnhancedMatchesScreenState extends State<EnhancedMatchesScreen>
         ),
         Match(
           id: '3',
-          userId1: 'demo_user',
+          userId1: currentUserId,
           userId2: '3',
           matchedAt: DateTime.now().subtract(const Duration(days: 1)),
           otherUserProfile: UserProfile(
@@ -216,7 +240,7 @@ class _EnhancedMatchesScreenState extends State<EnhancedMatchesScreen>
       });
     } catch (e) {
       if (mounted) {
-        print('Error loading conversations: $e');
+        debugPrint('Error loading conversations: $e');
       }
     }
   }
@@ -302,7 +326,7 @@ class _EnhancedMatchesScreenState extends State<EnhancedMatchesScreen>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
+        color: Colors.white.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(

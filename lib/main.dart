@@ -3,25 +3,30 @@ import 'package:flutter/foundation.dart';
 import 'main_app.dart';
 import 'screens/auth_screens.dart';
 import 'screens/photo_upload_screen.dart';
-import 'screens/photo_upload_test.dart';
-import 'screens/auto_photo_upload_test.dart';
-import 'screens/test_launcher.dart';
-import 'screens/real_photo_upload.dart';
 import 'tinder_like_profile_screen.dart';
 import 'services/api_service.dart';
 import 'config/environment.dart';
+import 'services/dev_auto_login.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   // Initialize environment configuration
-  // Use demo for simplified setup with in-memory databases
-  EnvSwitcher.useDemo();
+  EnvSwitcher.useDevelopment();
 
   if (kDebugMode) {
     print(
         '🚀 Starting DatingApp in ${EnvironmentConfig.settings.name} environment');
-    print('Auth Service: ${EnvironmentConfig.settings.authServiceUrl}');
+    print('Gateway: ${EnvironmentConfig.settings.gatewayUrl}');
+    print('Keycloak: ${EnvironmentConfig.settings.keycloakUrl}');
   }
 
+  final appState = AppState();
+  await appState.initialize();
+  if (!appState.hasValidAuthSession(gracePeriod: const Duration(seconds: 5))) {
+    await appState.logout();
+    await DevAutoLogin.ensureDemoSession();
+    await appState.initialize(forceRefresh: true);
+  }
   runApp(const DatingApp());
 }
 
@@ -57,30 +62,32 @@ class DatingApp extends StatelessWidget {
         '/home': (context) => const MainApp(),
         '/profile': (context) =>
             const TinderLikeProfileScreen(isFirstTime: false),
-        '/photos': (context) => PhotoUploadScreen(
-              authToken: AppState().authToken ?? '',
-              userId: int.tryParse(AppState().userId ?? '1') ?? 1,
-              onPhotoRequirementMet: (bool met) {
-                if (met) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Photo requirements met!')),
-                  );
-                }
-              },
-            ),
-        '/photo-test': (context) => PhotoUploadTestScreen(),
-        '/auto-photo-test': (context) => AutoPhotoUploadTest(),
-        '/test-launcher': (context) => TestLauncherScreen(),
-        '/real-photo-upload': (context) => RealPhotoUploadScreen(),
+        '/photos': (context) {
+          final appState = AppState();
+          final token = appState.authToken;
+          final userId = int.tryParse(appState.userId ?? '');
+
+          return PhotoUploadScreen(
+            authToken: token,
+            userId: userId,
+            onPhotoRequirementMet: (bool met) {
+              if (met) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Photo requirements met!')),
+                );
+              }
+            },
+          );
+        },
       },
-      home: TestLauncherScreen(), // Temporarily use test launcher as home
     );
   }
 
   String _getInitialRoute() {
-    // Check if user is logged in
-    final userId = AppState().userId;
-    return userId != null ? '/home' : '/login';
+    final appState = AppState();
+    return appState.hasValidAuthSession(gracePeriod: const Duration(minutes: 1))
+        ? '/home'
+        : '/login';
   }
 }
 

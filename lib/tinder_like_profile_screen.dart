@@ -1,12 +1,15 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import 'api_services.dart';
 import 'components/photo_grid_card.dart';
 import 'models.dart';
+import 'services/photo_service.dart';
 import 'utils/profile_completion_calculator.dart';
+import 'services/api_service.dart' as session_api;
 
 class TinderLikeProfileScreen extends StatefulWidget {
   final UserProfile? userProfile;
@@ -26,6 +29,7 @@ class TinderLikeProfileScreen extends StatefulWidget {
 class _TinderLikeProfileScreenState extends State<TinderLikeProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   final ImagePicker _picker = ImagePicker();
+  final PhotoService _photoService = PhotoService();
 
   // Form controllers
   final TextEditingController _firstNameController = TextEditingController();
@@ -48,12 +52,31 @@ class _TinderLikeProfileScreenState extends State<TinderLikeProfileScreen> {
   List<String> _interests = [];
   List<String> _languages = [];
   List<String> _photoUrls = [];
+  List<_PhotoSlot> _photoSlots = [];
 
   // State
   bool _isLoading = false;
   bool _isEditing = false;
   String? _errorMessage;
   int _profileCompletionPercentage = 0;
+  int? _uploadingIndex;
+  Map<String, String>? _imageHeaders;
+
+  Future<String?> _getAuthToken() async {
+    final token = await userApi.getAuthToken();
+    if (token != null && token.trim().isNotEmpty) {
+      return token;
+    }
+
+    final fallbackToken = session_api.AppState().authToken;
+    if (fallbackToken != null && fallbackToken.trim().isNotEmpty) {
+      debugPrint('🔁 Falling back to AppState auth token.');
+      return fallbackToken;
+    }
+
+    debugPrint('⚠️ No authentication token available for photo operations.');
+    return null;
+  }
 
   // Options
   final List<String> _educationOptions = [
@@ -172,6 +195,13 @@ class _TinderLikeProfileScreenState extends State<TinderLikeProfileScreen> {
     _calculateProfileCompletion();
   }
 
+  @override
+  void didUpdateWidget(TinderLikeProfileScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Refresh photos when widget updates (e.g., returning from another screen)
+    _loadPhotosFromPhotoService();
+  }
+
   void _loadProfile() {
     if (widget.userProfile != null) {
       final profile = widget.userProfile!;
@@ -184,7 +214,6 @@ class _TinderLikeProfileScreenState extends State<TinderLikeProfileScreen> {
       _selectedDate = profile.dateOfBirth;
       _selectedEducation = profile.education;
       _interests = List.from(profile.interests);
-      _photoUrls = List.from(profile.photoUrls);
 
       // Load extended fields
       _selectedGender = profile.gender;
@@ -194,6 +223,22 @@ class _TinderLikeProfileScreenState extends State<TinderLikeProfileScreen> {
       _selectedSmoking = profile.smoking;
       _selectedWorkout = profile.workout;
       _languages = List.from(profile.languages);
+
+      if (profile.photoUrls.isNotEmpty) {
+        final initialSlots = List.generate(
+          profile.photoUrls.length,
+          (index) => _PhotoSlot(
+            id: null,
+            url: profile.photoUrls[index],
+            displayOrder: index + 1,
+            isPrimary: index == 0,
+          ),
+        );
+        _updatePhotoState(initialSlots);
+      }
+
+      // Always load photos from PhotoService for grid display
+      _loadPhotosFromPhotoService();
     }
   }
 
@@ -219,6 +264,155 @@ class _TinderLikeProfileScreenState extends State<TinderLikeProfileScreen> {
         languages: _languages,
       );
     });
+  }
+
+  Future<void> _loadPhotosFromPhotoService() async {
+    try {
+      final token = await _getAuthToken();
+      final appStateUserId = session_api.AppState().userId;
+      final fallbackUserId = widget.userProfile?.userId;
+      final userId = int.tryParse(appStateUserId ?? fallbackUserId ?? '');
+
+      if (token != null && userId != null) {
+        final dotSegments = token.split('.').length;
+        debugPrint(
+          '🔄 Fetching photo summary for grid (token segments: $dotSegments, '
+          'length: ${token.length})',
+        );
+        final summary = await _photoService.getUserPhotos(
+          authToken: token,
+          userId: userId,
+        );
+
+        if (!mounted) return;
+        setState(() {
+          _imageHeaders = {'Authorization': 'Bearer $token'};
+          debugPrint('📥 Stored image headers: $_imageHeaders');
+
+          if (summary != null && summary.photos.isNotEmpty) {
+            debugPrint(
+              '✅ PhotoService returned ${summary.photos.length} photos '
+              '(primary: ${summary.hasPrimaryPhoto})',
+            );
+            final photos = List<PhotoResponse>.from(summary.photos);
+            photos.sort((a, b) {
+              if (a.isPrimary != b.isPrimary) {
+                return a.isPrimary ? -1 : 1;
+              }
+              return a.displayOrder.compareTo(b.displayOrder);
+            });
+
+            final slots = photos
+                .map(
+                  (photo) => _PhotoSlot(
+                    id: photo.id,
+                    url: _preferredPhotoUrl(photo.urls),
+                    displayOrder: photo.displayOrder,
+                    isPrimary: photo.isPrimary,
+                  ),
+                )
+                .toList();
+            for (final slot in slots) {
+              debugPrint(
+                '   ↳ Photo ${slot.id} | order ${slot.displayOrder} | '
+                'primary: ${slot.isPrimary} | url: ${slot.url}',
+              );
+            }
+            _updatePhotoState(slots);
+          } else {
+            debugPrint('⚠️ PhotoService returned no photos, using fallback.');
+            final profile = widget.userProfile;
+            final fallbackSlots = (profile?.photoUrls ?? [])
+                .asMap()
+                .entries
+                .map(
+                  (entry) => _PhotoSlot(
+                    id: null,
+                    url: entry.value,
+                    displayOrder: entry.key + 1,
+                    isPrimary: entry.key == 0,
+                  ),
+                )
+                .toList();
+            _updatePhotoState(fallbackSlots);
+          }
+        });
+
+        _calculateProfileCompletion();
+      } else {
+        debugPrint(
+          '⚠️ Missing authentication details. Token present: ${token != null}, '
+          'userId parsed: ${userId != null}',
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ Failed to load photos from PhotoService: $e');
+      // Fallback to UserService photos if available
+      final profile = widget.userProfile;
+      if (!mounted) return;
+      setState(() {
+        final fallbackSlots = (profile?.photoUrls ?? [])
+            .asMap()
+            .entries
+            .map(
+              (entry) => _PhotoSlot(
+                id: null,
+                url: entry.value,
+                displayOrder: entry.key + 1,
+                isPrimary: entry.key == 0,
+              ),
+            )
+            .toList();
+        _updatePhotoState(fallbackSlots);
+      });
+      _calculateProfileCompletion();
+    }
+  }
+
+  String _preferredPhotoUrl(PhotoUrls urls) {
+    final chosen = urls.full.isNotEmpty
+        ? urls.full
+        : (urls.medium.isNotEmpty ? urls.medium : urls.thumbnail);
+    debugPrint(
+      '🎯 Preferred URL selected -> full: ${urls.full.isNotEmpty}, '
+      'medium: ${urls.medium.isNotEmpty}, thumbnail: ${urls.thumbnail.isNotEmpty}, '
+      'chosen: $chosen',
+    );
+    return chosen;
+  }
+
+  void _updatePhotoState(List<_PhotoSlot> slots) {
+    debugPrint('🧮 Updating photo state with ${slots.length} slots');
+    slots.sort((a, b) {
+      if (a.isPrimary != b.isPrimary) {
+        return a.isPrimary ? -1 : 1;
+      }
+      return a.displayOrder.compareTo(b.displayOrder);
+    });
+
+    _photoSlots = List<_PhotoSlot>.generate(
+      slots.length,
+      (index) => slots[index].copyWith(displayOrder: index + 1),
+    );
+
+    if (_photoSlots.isNotEmpty && !_photoSlots.any((slot) => slot.isPrimary)) {
+      _photoSlots = _photoSlots
+          .asMap()
+          .entries
+          .map(
+            (entry) => entry.value.copyWith(isPrimary: entry.key == 0),
+          )
+          .toList();
+    }
+
+    _photoUrls = _photoSlots.map((slot) => slot.url).toList();
+    for (final slot in _photoSlots) {
+      debugPrint(
+        '   • Slot order ${slot.displayOrder} | primary: ${slot.isPrimary} | '
+        'id: ${slot.id} | url: ${slot.url}',
+      );
+    }
+    debugPrint('📊 Current photo URL list: $_photoUrls');
   }
 
   Future<void> _selectDate() async {
@@ -259,6 +453,7 @@ class _TinderLikeProfileScreenState extends State<TinderLikeProfileScreen> {
   }
 
   Future<void> _pickImage(int index) async {
+    debugPrint('🖱️ Pick image tapped for slot $index');
     final XFile? image = await _picker.pickImage(
       source: ImageSource.gallery,
       imageQuality: 80,
@@ -267,61 +462,154 @@ class _TinderLikeProfileScreenState extends State<TinderLikeProfileScreen> {
     );
 
     if (image != null) {
+      debugPrint('📸 Picked image ${image.name} (path: ${image.path})');
       setState(() {
         _isLoading = true;
+        _uploadingIndex = index;
         _errorMessage = null;
       });
 
       try {
-        final photoUrl = await userApi.uploadPhoto(File(image.path));
+        final token = await _getAuthToken();
+        if (token == null) {
+          throw Exception('Missing authentication token');
+        }
 
+        _imageHeaders = {'Authorization': 'Bearer $token'};
+        debugPrint('🔑 Updated image headers for upload: $_imageHeaders');
+
+        final result = await _photoService.uploadPhoto(
+          imageFile: File(image.path),
+          authToken: token,
+          isPrimary: _photoSlots.isEmpty || index == 0,
+          displayOrder: index + 1,
+        );
+
+        if (!result.success || result.photo == null) {
+          throw Exception(result.errorMessage ?? 'Unknown upload error');
+        }
+
+        final uploadedPhoto = result.photo!;
+        debugPrint(
+          '✅ Upload succeeded -> id: ${uploadedPhoto.id}, '
+          'displayOrder: ${uploadedPhoto.displayOrder}, '
+          'isPrimary: ${uploadedPhoto.isPrimary}',
+        );
+
+        if (!mounted) return;
         setState(() {
-          if (index < _photoUrls.length) {
-            _photoUrls[index] = photoUrl;
+          final updatedSlots = List<_PhotoSlot>.from(_photoSlots);
+          final newSlot = _PhotoSlot(
+            id: uploadedPhoto.id,
+            url: _preferredPhotoUrl(uploadedPhoto.urls),
+            displayOrder: uploadedPhoto.displayOrder,
+            isPrimary: uploadedPhoto.isPrimary,
+          );
+
+          if (index < updatedSlots.length) {
+            updatedSlots[index] = newSlot;
           } else {
-            _photoUrls.add(photoUrl);
+            updatedSlots.add(newSlot);
           }
+
+          _updatePhotoState(updatedSlots);
         });
         _calculateProfileCompletion();
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Photo uploaded successfully!')),
+            SnackBar(
+              content: Text(
+                result.warnings.isNotEmpty
+                    ? result.warnings.join('\n')
+                    : 'Photo uploaded successfully!',
+              ),
+            ),
           );
         }
       } catch (e) {
         setState(() {
           _errorMessage = 'Failed to upload photo: ${e.toString()}';
         });
+        debugPrint('❌ Photo upload failed: $e');
       } finally {
+        if (!mounted) {
+          return;
+        }
         setState(() {
           _isLoading = false;
+          _uploadingIndex = null;
         });
+        _loadPhotosFromPhotoService();
       }
     }
   }
 
   Future<void> _removePhoto(int index) async {
-    if (index < _photoUrls.length) {
-      try {
-        await userApi.deletePhoto(_photoUrls[index]);
-        setState(() {
-          _photoUrls.removeAt(index);
-        });
-        _calculateProfileCompletion();
+    if (index >= _photoSlots.length) {
+      return;
+    }
 
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Photo deleted successfully!')),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to delete photo: ${e.toString()}')),
-          );
-        }
+    final slot = _photoSlots[index];
+    debugPrint(
+        '🗑️ Removing photo at index $index -> id: ${slot.id}, url: ${slot.url}');
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final token = await _getAuthToken();
+      if (token == null) {
+        throw Exception('Missing authentication token');
       }
+
+      _imageHeaders = {'Authorization': 'Bearer $token'};
+
+      bool success = true;
+      if (slot.id != null) {
+        success = await _photoService.deletePhoto(
+          photoId: slot.id!,
+          authToken: token,
+        );
+        debugPrint(
+            '🧾 Delete request sent to PhotoService -> success: $success');
+      } else {
+        await userApi.deletePhoto(slot.url);
+        debugPrint(
+            '🧾 Delete request sent to legacy UserService for URL ${slot.url}');
+      }
+
+      if (!success) {
+        throw Exception('Photo service rejected the delete request');
+      }
+
+      if (!mounted) return;
+      setState(() {
+        final updatedSlots = List<_PhotoSlot>.from(_photoSlots)
+          ..removeAt(index);
+        _updatePhotoState(updatedSlots);
+      });
+      _calculateProfileCompletion();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Photo deleted successfully!')),
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ Failed to delete photo: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to delete photo: ${e.toString()}')),
+        );
+      }
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -432,7 +720,7 @@ class _TinderLikeProfileScreenState extends State<TinderLikeProfileScreen> {
             expandedHeight: 400,
             pinned: true,
             flexibleSpace: FlexibleSpaceBar(
-              background: _buildPhotoGrid(profile.photoUrls, false),
+              background: _buildPhotoGrid(false),
             ),
             actions: [
               IconButton(
@@ -587,7 +875,7 @@ class _TinderLikeProfileScreenState extends State<TinderLikeProfileScreen> {
             ),
             const Spacer(),
             Text(
-              '${_photoUrls.length}/9',
+              '${_photoSlots.length}/9',
               style: TextStyle(color: Colors.grey[600]),
             ),
           ],
@@ -597,12 +885,24 @@ class _TinderLikeProfileScreenState extends State<TinderLikeProfileScreen> {
           'Add at least 2 photos. First photo will be your main photo.',
         ),
         const SizedBox(height: 16),
-        _buildPhotoGrid(_photoUrls, true),
+        _buildPhotoGrid(true),
       ],
     );
   }
 
-  Widget _buildPhotoGrid(List<String> photos, bool isEditing) {
+  Widget _buildPhotoGrid(bool isEditing) {
+    final photos = _photoSlots;
+    debugPrint(
+      '🧩 Building photo grid (editing: $isEditing, slots: ${photos.length}, '
+      'itemCount: ${isEditing ? 9 : photos.length})',
+    );
+    for (var i = 0; i < photos.length; i++) {
+      final slot = photos[i];
+      debugPrint(
+        '   [grid] index $i -> order ${slot.displayOrder}, '
+        'primary: ${slot.isPrimary}, url: ${slot.url}',
+      );
+    }
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -615,17 +915,20 @@ class _TinderLikeProfileScreenState extends State<TinderLikeProfileScreen> {
       itemCount: isEditing ? 9 : photos.length,
       itemBuilder: (context, index) {
         if (index < photos.length) {
+          final slot = photos[index];
           return PhotoGridCard(
-            photoUrl: photos[index],
-            isMainPhoto: index == 0,
+            photoUrl: slot.url,
+            isMainPhoto: slot.isPrimary || index == 0,
             isEditing: isEditing,
-            onDelete: () => _removePhoto(index),
+            onDelete: isEditing ? () => _removePhoto(index) : null,
+            onTap: isEditing ? () => _pickImage(index) : null,
+            imageHeaders: _imageHeaders,
           );
         } else if (isEditing) {
           return PhotoGridCard(
             isEditing: true,
             onTap: () => _pickImage(index),
-            isLoading: _isLoading,
+            isLoading: _isLoading && _uploadingIndex == index,
           );
         }
         return const SizedBox.shrink();
@@ -983,8 +1286,11 @@ class _TinderLikeProfileScreenState extends State<TinderLikeProfileScreen> {
       width: double.infinity,
       height: 50,
       child: ElevatedButton.icon(
-        onPressed: () {
-          Navigator.pushNamed(context, '/photos');
+        onPressed: () async {
+          // Navigate to photos and refresh when returning
+          await Navigator.pushNamed(context, '/photos');
+          // Reload photos from PhotoService when returning from photo upload
+          _loadPhotosFromPhotoService();
         },
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.purple[400],
@@ -1118,5 +1424,33 @@ class _TinderLikeProfileScreenState extends State<TinderLikeProfileScreen> {
     _heightController.dispose();
     _schoolController.dispose();
     super.dispose();
+  }
+}
+
+class _PhotoSlot {
+  final int? id;
+  final String url;
+  final int displayOrder;
+  final bool isPrimary;
+
+  const _PhotoSlot({
+    this.id,
+    required this.url,
+    required this.displayOrder,
+    required this.isPrimary,
+  });
+
+  _PhotoSlot copyWith({
+    int? id,
+    String? url,
+    int? displayOrder,
+    bool? isPrimary,
+  }) {
+    return _PhotoSlot(
+      id: id ?? this.id,
+      url: url ?? this.url,
+      displayOrder: displayOrder ?? this.displayOrder,
+      isPrimary: isPrimary ?? this.isPrimary,
+    );
   }
 }

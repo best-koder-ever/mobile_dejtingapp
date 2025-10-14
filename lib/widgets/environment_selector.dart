@@ -40,7 +40,15 @@ class _EnvironmentSelectorState extends State<EnvironmentSelector> {
             ),
             const SizedBox(height: 12),
             Text(
-              'Auth: ${EnvironmentConfig.settings.authServiceUrl}',
+              'Gateway: ${EnvironmentConfig.settings.gatewayUrl}',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Keycloak: ${EnvironmentConfig.settings.keycloakUrl}',
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.grey[600],
@@ -50,16 +58,6 @@ class _EnvironmentSelectorState extends State<EnvironmentSelector> {
             Wrap(
               spacing: 8,
               children: [
-                _EnvironmentButton(
-                  label: 'Demo',
-                  isSelected: EnvironmentConfig.isDemo,
-                  onPressed: () {
-                    setState(() {
-                      EnvSwitcher.useDemo();
-                    });
-                    _showSnackBar('Switched to Demo Environment');
-                  },
-                ),
                 _EnvironmentButton(
                   label: 'Development',
                   isSelected: EnvironmentConfig.isDevelopment,
@@ -135,11 +133,9 @@ class EnvironmentInfo extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: EnvironmentConfig.isDemo
-            ? Colors.orange.withOpacity(0.8)
-            : EnvironmentConfig.isDevelopment
-                ? Colors.blue.withOpacity(0.8)
-                : Colors.red.withOpacity(0.8),
+        color: EnvironmentConfig.isDevelopment
+            ? Colors.blue.withOpacity(0.8)
+            : Colors.red.withOpacity(0.8),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(

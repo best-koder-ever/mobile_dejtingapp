@@ -3,17 +3,20 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'models.dart';
 import 'api_services.dart';
+import 'services/photo_service.dart' as photo_api;
 import 'utils/profile_completion_calculator.dart';
 import 'components/photo_grid_card.dart';
 
 class EnhancedProfileScreen extends StatefulWidget {
   final UserProfile? userProfile;
   final bool isFirstTime;
+  final photo_api.PhotoService? photoService;
 
   const EnhancedProfileScreen({
     super.key,
     this.userProfile,
     this.isFirstTime = false,
+    this.photoService,
   });
 
   @override
@@ -23,6 +26,7 @@ class EnhancedProfileScreen extends StatefulWidget {
 class _EnhancedProfileScreenState extends State<EnhancedProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   final ImagePicker _picker = ImagePicker();
+  late final photo_api.PhotoService _photoService;
 
   // Form controllers
   final TextEditingController _firstNameController = TextEditingController();
@@ -45,10 +49,13 @@ class _EnhancedProfileScreenState extends State<EnhancedProfileScreen> {
   List<String> _interests = [];
   List<String> _languages = [];
   List<String> _photoUrls = [];
+  List<_PhotoSlot> _photoSlots = [];
   bool _isLoading = false;
   bool _isEditing = false;
   String? _errorMessage;
   int _profileCompletionPercentage = 0;
+  int? _uploadingIndex;
+  Map<String, String>? _imageHeaders;
 
   // Options for dropdowns
   final List<String> _educationOptions = [
@@ -188,8 +195,10 @@ class _EnhancedProfileScreenState extends State<EnhancedProfileScreen> {
   @override
   void initState() {
     super.initState();
+    _photoService = widget.photoService ?? photo_api.PhotoService();
     _isEditing = widget.isFirstTime || widget.userProfile == null;
     _loadProfile();
+    _fetchPhotosFromService();
     _calculateProfileCompletion();
   }
 
@@ -205,7 +214,16 @@ class _EnhancedProfileScreenState extends State<EnhancedProfileScreen> {
       _selectedDate = profile.dateOfBirth;
       _selectedEducation = profile.education;
       _interests = List.from(profile.interests);
-      _photoUrls = List.from(profile.photoUrls);
+      final initialSlots = List.generate(
+        profile.photoUrls.length,
+        (index) => _PhotoSlot(
+          id: null,
+          url: profile.photoUrls[index],
+          displayOrder: index + 1,
+          isPrimary: index == 0,
+        ),
+      );
+      _updatePhotoState(initialSlots);
 
       // Load additional fields if available
       _selectedGender = profile.gender;
@@ -222,24 +240,104 @@ class _EnhancedProfileScreenState extends State<EnhancedProfileScreen> {
     setState(() {
       _profileCompletionPercentage =
           ProfileCompletionCalculator.calculateProfileCompletion(
-            firstName: _firstNameController.text,
-            lastName: _lastNameController.text,
-            bio: _bioController.text,
-            photoUrls: _photoUrls,
-            interests: _interests,
-            city: _cityController.text,
-            occupation: _occupationController.text,
-            education: _selectedEducation,
-            gender: _selectedGender,
-            lookingFor: _selectedLookingFor,
-            relationshipType: _selectedRelationshipType,
-            drinking: _selectedDrinking,
-            smoking: _selectedSmoking,
-            workout: _selectedWorkout,
-            height: _heightController.text,
-            languages: _languages,
-          );
+        firstName: _firstNameController.text,
+        lastName: _lastNameController.text,
+        bio: _bioController.text,
+        photoUrls: _photoUrls,
+        interests: _interests,
+        city: _cityController.text,
+        occupation: _occupationController.text,
+        education: _selectedEducation,
+        gender: _selectedGender,
+        lookingFor: _selectedLookingFor,
+        relationshipType: _selectedRelationshipType,
+        drinking: _selectedDrinking,
+        smoking: _selectedSmoking,
+        workout: _selectedWorkout,
+        height: _heightController.text,
+        languages: _languages,
+      );
     });
+  }
+
+  Future<void> _fetchPhotosFromService() async {
+    try {
+      final token = await userApi.getAuthToken();
+      if (token == null) {
+        return;
+      }
+
+      final summary = await _photoService.getUserPhotos(authToken: token);
+      if (!mounted) return;
+      setState(() {
+        _imageHeaders = {'Authorization': 'Bearer $token'};
+
+        if (summary != null) {
+          final photos = List<photo_api.PhotoResponse>.from(summary.photos);
+          photos.sort((a, b) {
+            if (a.isPrimary != b.isPrimary) {
+              return a.isPrimary ? -1 : 1;
+            }
+            return a.displayOrder.compareTo(b.displayOrder);
+          });
+
+          final slots = photos
+              .map(
+                (photo) => _PhotoSlot(
+                  id: photo.id,
+                  url: _preferredPhotoUrl(photo.urls),
+                  displayOrder: photo.displayOrder,
+                  isPrimary: photo.isPrimary,
+                ),
+              )
+              .toList();
+          _updatePhotoState(slots);
+        }
+      });
+
+      if (summary != null) {
+        _calculateProfileCompletion();
+      }
+    } catch (e) {
+      debugPrint('Failed to load photos: $e');
+    }
+  }
+
+  String _preferredPhotoUrl(photo_api.PhotoUrls urls) {
+    if (urls.medium.isNotEmpty) {
+      return urls.medium;
+    }
+    if (urls.thumbnail.isNotEmpty) {
+      return urls.thumbnail;
+    }
+    return urls.full;
+  }
+
+  void _updatePhotoState(List<_PhotoSlot> slots) {
+    slots.sort(_photoSlotComparator);
+    _photoSlots = List<_PhotoSlot>.generate(
+      slots.length,
+      (index) => slots[index].copyWith(displayOrder: index + 1),
+    );
+    if (!_photoSlots.any((slot) => slot.isPrimary) && _photoSlots.isNotEmpty) {
+      _photoSlots = _photoSlots
+          .asMap()
+          .entries
+          .map(
+            (entry) => entry.value.copyWith(
+              isPrimary: entry.key == 0,
+            ),
+          )
+          .toList();
+    }
+    _photoUrls = _photoSlots.map((slot) => slot.url).toList();
+  }
+
+  int _photoSlotComparator(_PhotoSlot a, _PhotoSlot b) {
+    if (a.isPrimary != b.isPrimary) {
+      return a.isPrimary ? -1 : 1;
+    }
+    return a.displayOrder.compareTo(b.displayOrder);
   }
 
   Future<void> _selectDate() async {
@@ -290,54 +388,127 @@ class _EnhancedProfileScreenState extends State<EnhancedProfileScreen> {
     if (image != null) {
       setState(() {
         _isLoading = true;
+        _uploadingIndex = index;
         _errorMessage = null;
       });
 
       try {
-        // Upload image to photo service
-        final photoUrl = await userApi.uploadPhoto(File(image.path));
+        final token = await userApi.getAuthToken();
+        if (token == null) {
+          throw Exception('Missing authentication token');
+        }
+
+        _imageHeaders = {'Authorization': 'Bearer $token'};
+
+        final result = await _photoService.uploadPhoto(
+          imageFile: File(image.path),
+          authToken: token,
+          isPrimary: _photoSlots.isEmpty || index == 0,
+          displayOrder: index + 1,
+        );
+
+        if (!result.success || result.photo == null) {
+          throw Exception(result.errorMessage ?? 'Unknown upload error');
+        }
+
+        final uploadedPhoto = result.photo!;
 
         setState(() {
-          if (index < _photoUrls.length) {
-            _photoUrls[index] = photoUrl;
+          _imageHeaders = {'Authorization': 'Bearer $token'};
+          final updatedSlots = List<_PhotoSlot>.from(_photoSlots);
+          final newSlot = _PhotoSlot(
+            id: uploadedPhoto.id,
+            url: _preferredPhotoUrl(uploadedPhoto.urls),
+            displayOrder: uploadedPhoto.displayOrder,
+            isPrimary: uploadedPhoto.isPrimary,
+          );
+
+          if (index < updatedSlots.length) {
+            updatedSlots[index] = newSlot;
           } else {
-            _photoUrls.add(photoUrl);
+            updatedSlots.add(newSlot);
           }
+
+          _updatePhotoState(updatedSlots);
         });
         _calculateProfileCompletion();
 
+        final message = result.warnings.isNotEmpty
+            ? result.warnings.join('\n')
+            : 'Photo uploaded successfully!';
+
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Photo uploaded successfully!')),
+          SnackBar(content: Text(message)),
         );
       } catch (e) {
         setState(() {
           _errorMessage = 'Failed to upload photo: ${e.toString()}';
         });
       } finally {
+        if (!mounted) {
+          return;
+        }
         setState(() {
           _isLoading = false;
+          _uploadingIndex = null;
         });
       }
     }
   }
 
   Future<void> _removePhoto(int index) async {
-    if (index < _photoUrls.length) {
-      try {
-        await userApi.deletePhoto(_photoUrls[index]);
-        setState(() {
-          _photoUrls.removeAt(index);
-        });
-        _calculateProfileCompletion();
+    if (index >= _photoSlots.length) {
+      return;
+    }
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Photo deleted successfully!')),
-        );
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to delete photo: ${e.toString()}')),
-        );
+    final slot = _photoSlots[index];
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final token = await userApi.getAuthToken();
+      if (token == null) {
+        throw Exception('Missing authentication token');
       }
+
+      bool success = true;
+      if (slot.id != null) {
+        success = await _photoService.deletePhoto(
+          photoId: slot.id!,
+          authToken: token,
+        );
+      } else {
+        await userApi.deletePhoto(slot.url);
+      }
+
+      if (!success) {
+        throw Exception('Photo service rejected the delete request');
+      }
+
+      setState(() {
+        final updatedSlots = List<_PhotoSlot>.from(_photoSlots)
+          ..removeAt(index);
+        for (var i = 0; i < updatedSlots.length; i++) {
+          updatedSlots[i] = updatedSlots[i].copyWith(displayOrder: i + 1);
+        }
+        _updatePhotoState(updatedSlots);
+      });
+      _calculateProfileCompletion();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Photo deleted successfully!')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to delete photo: ${e.toString()}')),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -448,7 +619,7 @@ class _EnhancedProfileScreenState extends State<EnhancedProfileScreen> {
             expandedHeight: 400,
             pinned: true,
             flexibleSpace: FlexibleSpaceBar(
-              background: _buildPhotoGrid(profile.photoUrls, false),
+              background: _buildPhotoGrid(isEditing: false),
             ),
             actions: [
               IconButton(
@@ -514,15 +685,14 @@ class _EnhancedProfileScreenState extends State<EnhancedProfileScreen> {
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
-                      children:
-                          profile.interests
-                              .map(
-                                (interest) => Chip(
-                                  label: Text(interest),
-                                  backgroundColor: Colors.pink[100],
-                                ),
-                              )
-                              .toList(),
+                      children: profile.interests
+                          .map(
+                            (interest) => Chip(
+                              label: Text(interest),
+                              backgroundColor: Colors.pink[100],
+                            ),
+                          )
+                          .toList(),
                     ),
                     const SizedBox(height: 16),
                   ],
@@ -612,18 +782,17 @@ class _EnhancedProfileScreenState extends State<EnhancedProfileScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child:
-                      _isLoading
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : Text(
-                            widget.isFirstTime
-                                ? 'Create Profile'
-                                : 'Save Changes',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
+                  child: _isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : Text(
+                          widget.isFirstTime
+                              ? 'Create Profile'
+                              : 'Save Changes',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
                           ),
+                        ),
                 ),
               ),
 
@@ -739,12 +908,15 @@ class _EnhancedProfileScreenState extends State<EnhancedProfileScreen> {
           'Add at least 2 photos. First photo will be your main photo.',
         ),
         const SizedBox(height: 16),
-        _buildPhotoGrid(_photoUrls, true),
+        _buildPhotoGrid(isEditing: true),
       ],
     );
   }
 
-  Widget _buildPhotoGrid(List<String> photos, bool isEditing) {
+  Widget _buildPhotoGrid({required bool isEditing}) {
+    final photos = _photoSlots;
+    final itemCount = isEditing ? 9 : photos.length;
+
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -754,20 +926,23 @@ class _EnhancedProfileScreenState extends State<EnhancedProfileScreen> {
         mainAxisSpacing: 8,
         childAspectRatio: 0.75,
       ),
-      itemCount: isEditing ? 9 : photos.length,
+      itemCount: itemCount,
       itemBuilder: (context, index) {
         if (index < photos.length) {
+          final slot = photos[index];
           return PhotoGridCard(
-            photoUrl: photos[index],
-            isMainPhoto: index == 0,
+            photoUrl: slot.url,
+            isMainPhoto: slot.isPrimary || index == 0,
             isEditing: isEditing,
-            onDelete: () => _removePhoto(index),
+            onDelete: isEditing ? () => _removePhoto(index) : null,
+            onTap: isEditing ? () => _pickImage(index) : null,
+            imageHeaders: _imageHeaders,
           );
         } else if (isEditing) {
           return PhotoGridCard(
             isEditing: true,
             onTap: () => _pickImage(index),
-            isLoading: _isLoading,
+            isLoading: _isLoading && _uploadingIndex == index,
           );
         }
         return const SizedBox.shrink();
@@ -790,7 +965,6 @@ class _EnhancedProfileScreenState extends State<EnhancedProfileScreen> {
           ],
         ),
         const SizedBox(height: 16),
-
         TextFormField(
           controller: _bioController,
           decoration: const InputDecoration(
@@ -805,7 +979,6 @@ class _EnhancedProfileScreenState extends State<EnhancedProfileScreen> {
           onChanged: (_) => _calculateProfileCompletion(),
         ),
         const SizedBox(height: 16),
-
         Row(
           children: [
             Expanded(
@@ -833,7 +1006,6 @@ class _EnhancedProfileScreenState extends State<EnhancedProfileScreen> {
           ],
         ),
         const SizedBox(height: 16),
-
         TextFormField(
           controller: _occupationController,
           decoration: const InputDecoration(
@@ -843,7 +1015,6 @@ class _EnhancedProfileScreenState extends State<EnhancedProfileScreen> {
           onChanged: (_) => _calculateProfileCompletion(),
         ),
         const SizedBox(height: 16),
-
         TextFormField(
           controller: _schoolController,
           decoration: const InputDecoration(
@@ -853,22 +1024,20 @@ class _EnhancedProfileScreenState extends State<EnhancedProfileScreen> {
           onChanged: (_) => _calculateProfileCompletion(),
         ),
         const SizedBox(height: 16),
-
         DropdownButtonFormField<String>(
           value: _selectedEducation,
           decoration: const InputDecoration(
             labelText: 'Education',
             border: OutlineInputBorder(),
           ),
-          items:
-              _educationOptions
-                  .map(
-                    (education) => DropdownMenuItem(
-                      value: education,
-                      child: Text(education),
-                    ),
-                  )
-                  .toList(),
+          items: _educationOptions
+              .map(
+                (education) => DropdownMenuItem(
+                  value: education,
+                  child: Text(education),
+                ),
+              )
+              .toList(),
           onChanged: (value) {
             setState(() => _selectedEducation = value);
             _calculateProfileCompletion();
@@ -893,79 +1062,71 @@ class _EnhancedProfileScreenState extends State<EnhancedProfileScreen> {
           ],
         ),
         const SizedBox(height: 16),
-
         DropdownButtonFormField<String>(
           value: _selectedRelationshipType,
           decoration: const InputDecoration(
             labelText: 'Looking for',
             border: OutlineInputBorder(),
           ),
-          items:
-              _relationshipTypeOptions
-                  .map(
-                    (type) => DropdownMenuItem(value: type, child: Text(type)),
-                  )
-                  .toList(),
+          items: _relationshipTypeOptions
+              .map(
+                (type) => DropdownMenuItem(value: type, child: Text(type)),
+              )
+              .toList(),
           onChanged: (value) {
             setState(() => _selectedRelationshipType = value);
             _calculateProfileCompletion();
           },
         ),
         const SizedBox(height: 16),
-
         DropdownButtonFormField<String>(
           value: _selectedDrinking,
           decoration: const InputDecoration(
             labelText: 'Drinking',
             border: OutlineInputBorder(),
           ),
-          items:
-              _drinkingOptions
-                  .map(
-                    (option) =>
-                        DropdownMenuItem(value: option, child: Text(option)),
-                  )
-                  .toList(),
+          items: _drinkingOptions
+              .map(
+                (option) =>
+                    DropdownMenuItem(value: option, child: Text(option)),
+              )
+              .toList(),
           onChanged: (value) {
             setState(() => _selectedDrinking = value);
             _calculateProfileCompletion();
           },
         ),
         const SizedBox(height: 16),
-
         DropdownButtonFormField<String>(
           value: _selectedSmoking,
           decoration: const InputDecoration(
             labelText: 'Smoking',
             border: OutlineInputBorder(),
           ),
-          items:
-              _smokingOptions
-                  .map(
-                    (option) =>
-                        DropdownMenuItem(value: option, child: Text(option)),
-                  )
-                  .toList(),
+          items: _smokingOptions
+              .map(
+                (option) =>
+                    DropdownMenuItem(value: option, child: Text(option)),
+              )
+              .toList(),
           onChanged: (value) {
             setState(() => _selectedSmoking = value);
             _calculateProfileCompletion();
           },
         ),
         const SizedBox(height: 16),
-
         DropdownButtonFormField<String>(
           value: _selectedWorkout,
           decoration: const InputDecoration(
             labelText: 'Workout',
             border: OutlineInputBorder(),
           ),
-          items:
-              _workoutOptions
-                  .map(
-                    (option) =>
-                        DropdownMenuItem(value: option, child: Text(option)),
-                  )
-                  .toList(),
+          items: _workoutOptions
+              .map(
+                (option) =>
+                    DropdownMenuItem(value: option, child: Text(option)),
+              )
+              .toList(),
           onChanged: (value) {
             setState(() => _selectedWorkout = value);
             _calculateProfileCompletion();
@@ -997,21 +1158,19 @@ class _EnhancedProfileScreenState extends State<EnhancedProfileScreen> {
         const SizedBox(height: 8),
         const Text('Choose interests to show on your profile'),
         const SizedBox(height: 16),
-
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children:
-              _availableInterests.map((interest) {
-                final isSelected = _interests.contains(interest);
-                return FilterChip(
-                  label: Text(interest),
-                  selected: isSelected,
-                  onSelected: (selected) => _toggleInterest(interest),
-                  selectedColor: Colors.pink[200],
-                  checkmarkColor: Colors.pink[800],
-                );
-              }).toList(),
+          children: _availableInterests.map((interest) {
+            final isSelected = _interests.contains(interest);
+            return FilterChip(
+              label: Text(interest),
+              selected: isSelected,
+              onSelected: (selected) => _toggleInterest(interest),
+              selectedColor: Colors.pink[200],
+              checkmarkColor: Colors.pink[800],
+            );
+          }).toList(),
         ),
       ],
     );
@@ -1039,21 +1198,19 @@ class _EnhancedProfileScreenState extends State<EnhancedProfileScreen> {
         const SizedBox(height: 8),
         const Text('Select languages you speak'),
         const SizedBox(height: 16),
-
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children:
-              _languageOptions.map((language) {
-                final isSelected = _languages.contains(language);
-                return FilterChip(
-                  label: Text(language),
-                  selected: isSelected,
-                  onSelected: (selected) => _toggleLanguage(language),
-                  selectedColor: Colors.blue[200],
-                  checkmarkColor: Colors.blue[800],
-                );
-              }).toList(),
+          children: _languageOptions.map((language) {
+            final isSelected = _languages.contains(language);
+            return FilterChip(
+              label: Text(language),
+              selected: isSelected,
+              onSelected: (selected) => _toggleLanguage(language),
+              selectedColor: Colors.blue[200],
+              checkmarkColor: Colors.blue[800],
+            );
+          }).toList(),
         ),
       ],
     );
@@ -1068,7 +1225,6 @@ class _EnhancedProfileScreenState extends State<EnhancedProfileScreen> {
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
-
         if (profile.occupation?.isNotEmpty == true)
           _buildDetailRow(Icons.work, 'Job', profile.occupation!),
         if (profile.education?.isNotEmpty == true)
@@ -1125,7 +1281,7 @@ class _EnhancedProfileScreenState extends State<EnhancedProfileScreen> {
           'Add at least 2 photos. First photo will be your main photo.',
         ),
         const SizedBox(height: 16),
-        _buildPhotoGrid(_photoUrls, true),
+        _buildPhotoGrid(isEditing: true),
       ],
     );
   }
@@ -1141,5 +1297,33 @@ class _EnhancedProfileScreenState extends State<EnhancedProfileScreen> {
     _schoolController.dispose();
     _jobTitleController.dispose();
     super.dispose();
+  }
+}
+
+class _PhotoSlot {
+  final int? id;
+  final String url;
+  final int displayOrder;
+  final bool isPrimary;
+
+  const _PhotoSlot({
+    this.id,
+    required this.url,
+    required this.displayOrder,
+    this.isPrimary = false,
+  });
+
+  _PhotoSlot copyWith({
+    int? id,
+    String? url,
+    int? displayOrder,
+    bool? isPrimary,
+  }) {
+    return _PhotoSlot(
+      id: id ?? this.id,
+      url: url ?? this.url,
+      displayOrder: displayOrder ?? this.displayOrder,
+      isPrimary: isPrimary ?? this.isPrimary,
+    );
   }
 }

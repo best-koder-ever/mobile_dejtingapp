@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:mime/mime.dart';
@@ -12,13 +13,23 @@ class PhotoService {
 
   /// Upload a photo using PhotoUploadDto
   Future<PhotoUploadResult> uploadPhoto({
-    required File imageFile,
+    File? imageFile,
+    Uint8List? imageBytes,
+    String? fileName,
     required String authToken,
+    Object? userId, // backwards compatibility, ignored by the API
     bool isPrimary = false,
     int? displayOrder,
     String? description,
   }) async {
     try {
+      if (imageFile == null && imageBytes == null) {
+        return PhotoUploadResult(
+          success: false,
+          errorMessage: 'No image data provided',
+        );
+      }
+
       var request = http.MultipartRequest(
         'POST',
         Uri.parse('$baseUrl/api/photos'),
@@ -27,13 +38,31 @@ class PhotoService {
       // Add JWT token
       request.headers['Authorization'] = 'Bearer $authToken';
 
-      // Add photo file - matches PhotoUploadDto.Photo property
-      String? mimeType = lookupMimeType(imageFile.path);
-      request.files.add(await http.MultipartFile.fromPath(
-        'Photo', // Must match PhotoUploadDto property name
-        imageFile.path,
-        contentType: mimeType != null ? MediaType.parse(mimeType) : null,
-      ));
+      http.MultipartFile photoPart;
+      String resolvedFileName;
+
+      if (imageFile != null) {
+        // Add photo file - matches PhotoUploadDto.Photo property
+        resolvedFileName = fileName ?? path.basename(imageFile.path);
+        String? mimeType = lookupMimeType(imageFile.path);
+        photoPart = await http.MultipartFile.fromPath(
+          'Photo', // Must match PhotoUploadDto property name
+          imageFile.path,
+          filename: resolvedFileName,
+          contentType: mimeType != null ? MediaType.parse(mimeType) : null,
+        );
+      } else {
+        resolvedFileName = fileName ?? 'upload.jpg';
+        String? mimeType = lookupMimeType(resolvedFileName);
+        photoPart = http.MultipartFile.fromBytes(
+          'Photo',
+          imageBytes!,
+          filename: resolvedFileName,
+          contentType: mimeType != null ? MediaType.parse(mimeType) : null,
+        );
+      }
+
+      request.files.add(photoPart);
 
       // Add metadata fields to match PhotoUploadDto
       request.fields['IsPrimary'] = isPrimary.toString();
@@ -44,8 +73,12 @@ class PhotoService {
         request.fields['Description'] = description;
       }
 
-      print('📤 Uploading photo: ${path.basename(imageFile.path)}');
-      print('📤 File size: ${await imageFile.length()} bytes');
+      print('📤 Uploading photo: $resolvedFileName');
+      if (imageFile != null) {
+        print('📤 File size: ${await imageFile.length()} bytes');
+      } else if (imageBytes != null) {
+        print('📤 File size: ${imageBytes.lengthInBytes} bytes');
+      }
 
       final response = await request.send();
       final responseBody = await response.stream.bytesToString();
@@ -53,7 +86,7 @@ class PhotoService {
       print('📥 Upload response: ${response.statusCode}');
       print('📥 Response body: $responseBody');
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         final jsonData = json.decode(responseBody);
         return PhotoUploadResult.fromJson(jsonData);
       } else {
@@ -74,11 +107,11 @@ class PhotoService {
   /// Get user's photos using UserPhotoSummaryDto endpoint
   Future<UserPhotoSummary?> getUserPhotos({
     required String authToken,
-    required int userId,
+    Object? userId, // backwards compatibility, ignored by the API
   }) async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/api/photos/user/$userId'),
+        Uri.parse('$baseUrl/api/photos'),
         headers: {
           'Authorization': 'Bearer $authToken',
           'Content-Type': 'application/json',

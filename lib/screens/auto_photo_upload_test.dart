@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import '../services/photo_service.dart';
-import '../services/demo_service.dart';
+import '../services/api_service.dart' show AppState;
 import '../config/environment.dart';
 import 'dart:typed_data';
 
@@ -52,18 +52,25 @@ class _AutoPhotoUploadTestState extends State<AutoPhotoUploadTest> {
     _addLog('🧪 Starting automated photo upload tests...');
 
     try {
-      // Test 1: Demo Login
-      _addLog('Test 1: Demo user authentication');
-      final loginResult =
-          await DemoService.loginWithDemoUser('erik.astrom@demo.com');
+      // Test 1: Ensure authenticated session is available
+      _addLog('Test 1: Retrieve active authentication session');
+      final appState = AppState();
+      await appState.initialize();
+      final refreshedToken = await appState.getOrRefreshAuthToken();
+      final parsedUserId = int.tryParse(appState.userId ?? '');
 
-      if (loginResult.success && loginResult.token != null) {
-        _authToken = loginResult.token;
-        _userId = 1; // Demo user ID
-        _addResult('Demo login successful', true);
+      if (refreshedToken != null &&
+          refreshedToken.isNotEmpty &&
+          parsedUserId != null) {
+        _authToken = refreshedToken;
+        _userId = parsedUserId;
+        _addResult('Authentication token available', true);
         _addLog('Token received: ${_authToken!.substring(0, 50)}...');
       } else {
-        _addResult('Demo login failed: ${loginResult.message}', false);
+        _addResult(
+          'Authentication unavailable. Please log in before running tests.',
+          false,
+        );
         setState(() => _isRunning = false);
         return;
       }
@@ -90,7 +97,7 @@ class _AutoPhotoUploadTestState extends State<AutoPhotoUploadTest> {
         if (existingPhotos != null) {
           _addResult('Successfully connected to photo service', true);
         } else {
-          _addResult('No existing photos found (normal for demo user)', true);
+          _addResult('No existing photos found for current user', true);
         }
       } catch (e) {
         _addResult('Error fetching photos: $e', false);
@@ -369,7 +376,7 @@ class _AutoPhotoUploadTestState extends State<AutoPhotoUploadTest> {
                     SizedBox(height: 8),
                     Text(
                       'This will automatically test all photo upload components:\n'
-                      '• Demo user authentication\n'
+                      '• Authentication token availability\n'
                       '• PhotoService connectivity\n'
                       '• JWT token validation\n'
                       '• API endpoint accessibility',
