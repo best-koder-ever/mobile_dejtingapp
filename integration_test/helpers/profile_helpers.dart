@@ -112,7 +112,8 @@ Future<Map<String, dynamic>> getMyProfile(TestUser user) async {
     throw Exception('Get profile failed: ${response.statusCode}');
   }
 
-  return jsonDecode(response.body);
+  final body = jsonDecode(response.body);
+  return body['data'] ?? body; // Unwrap ApiResponse
 }
 
 /// Update profile (for testing edits after onboarding)
@@ -134,7 +135,8 @@ Future<Map<String, dynamic>> updateProfile(
     throw Exception('Update profile failed: ${response.statusCode}');
   }
 
-  return jsonDecode(response.body);
+  final body = jsonDecode(response.body);
+  return body['data'] ?? body; // Unwrap ApiResponse
 }
 
 /// Helper: Complete entire onboarding flow
