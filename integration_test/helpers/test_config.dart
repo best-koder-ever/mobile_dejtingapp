@@ -1,56 +1,114 @@
-/// Test configuration for integration tests
-/// Flexible configuration that adapts to environment changes
+import 'package:flutter/foundation.dart';
+
+/// Test configuration with environment-based overrides
+/// Use --dart-define to customize URLs for different environments
 class TestConfig {
-  // Base URLs - easily overridable via environment
-  static String get baseUrl => 
-      const String.fromEnvironment('API_URL', defaultValue: 'http://localhost:8080');
-  
-  static String get yarpUrl => baseUrl;
-  
-  // Service-specific URLs (when bypassing YARP for debugging)
-  static String get userServiceUrl => 
-      const String.fromEnvironment('USER_SERVICE_URL', defaultValue: 'http://localhost:8082');
-  static String get matchingServiceUrl => 
-      const String.fromEnvironment('MATCHING_SERVICE_URL', defaultValue: 'http://localhost:8083');
-  static String get swipeServiceUrl => 
-      const String.fromEnvironment('SWIPE_SERVICE_URL', defaultValue: 'http://localhost:8084');
-  static String get photoServiceUrl => 
-      const String.fromEnvironment('PHOTO_SERVICE_URL', defaultValue: 'http://localhost:8085');
-  static String get messagingServiceUrl => 
-      const String.fromEnvironment('MESSAGING_SERVICE_URL', defaultValue: 'http://localhost:8086');
-  
-  // Test data - randomized to avoid conflicts
-  static String generateTestEmail() => 
-      'test_${DateTime.now().millisecondsSinceEpoch}@example.com';
-  
-  static String generateTestUsername() => 
-      'testuser_${DateTime.now().millisecondsSinceEpoch}';
-  
-  // Timeouts - adjust based on CI vs local
-  static Duration get apiTimeout => 
-      const Duration(seconds: 30);
-  static Duration get longApiTimeout => 
-      const Duration(minutes: 2);
-  
-  // Feature flags - enable/disable test groups
-  static bool get testMessaging => 
-      const bool.fromEnvironment('TEST_MESSAGING', defaultValue: true);
-  static bool get testPhotos => 
-      const bool.fromEnvironment('TEST_PHOTOS', defaultValue: true);
-  static bool get testSafety => 
-      const bool.fromEnvironment('TEST_SAFETY', defaultValue: true);
+  // Base gateway URL (YARP)
+  static const String baseUrl = String.fromEnvironment(
+    'API_URL',
+    defaultValue: 'http://localhost:8080',
+  );
+
+  // Keycloak configuration
+  static const String keycloakBaseUrl = String.fromEnvironment(
+    'KEYCLOAK_URL',
+    defaultValue: 'http://localhost:8090',
+  );
+
+  static const String keycloakRealm = String.fromEnvironment(
+    'KEYCLOAK_REALM',
+    defaultValue: 'DatingApp',
+  );
+
+  static const String keycloakClientId = String.fromEnvironment(
+    'KEYCLOAK_CLIENT_ID',
+    defaultValue: 'dejtingapp-flutter',
+  );
+
+  static const String keycloakAdminUser = String.fromEnvironment(
+    'KEY CLOAK_ADMIN',
+    defaultValue: 'admin',
+  );
+
+  static const String keycloakAdminPassword = String.fromEnvironment(
+    'KEYCLOAK_ADMIN_PASSWORD',
+    defaultValue: 'admin',
+  );
+
+  // Service-specific URLs (for debugging YARP routing issues)
+  static const String yarpUrl = String.fromEnvironment(
+    'YARP_URL',
+    defaultValue: 'http://localhost:8080',
+  );
+
+  static const String userServiceUrl = String.fromEnvironment(
+    'USER_SERVICE_URL',
+    defaultValue: 'http://localhost:8082',
+  );
+
+  static const String matchingServiceUrl = String.fromEnvironment(
+    'MATCHING_SERVICE_URL',
+    defaultValue: 'http://localhost:8083',
+  );
+
+  static const String swipeServiceUrl = String.fromEnvironment(
+    'SWIPE_SERVICE_URL',
+    defaultValue: 'http://localhost:8087',
+  );
+
+  static const String photoServiceUrl = String.fromEnvironment(
+    'PHOTO_SERVICE_URL',
+    defaultValue: 'http://localhost:8085',
+  );
+
+  static const String messagingServiceUrl = String.fromEnvironment(
+    'MESSAGING_SERVICE_URL',
+    defaultValue: 'http://localhost:8086',
+  );
+
+  // Feature flags
+  static const bool testMessaging = bool.fromEnvironment(
+    'TEST_MESSAGING',
+    defaultValue: true,
+  );
+
+  static const bool testPhotos = bool.fromEnvironment(
+    'TEST_PHOTOS',
+    defaultValue: true,
+  );
+
+  static const bool testSafety = bool.fromEnvironment(
+    'TEST_SAFETY',
+    defaultValue: true,
+  );
+
+  // Timeouts
+  static const Duration apiTimeout = Duration(seconds: 30);
+  static const Duration longApiTimeout = Duration(minutes: 2);
+
+  // Test data generators
+  static String generateTestEmail() {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    return 'test_$timestamp@example.com';
+  }
+
+  static String generateTestUsername() {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    return 'testuser_$timestamp';
+  }
 }
 
-/// Test user data holder - reusable across tests
+/// Mutable test user object that tracks auth state across helpers
 class TestUser {
-  final String email;
-  final String password;
-  final String username;
-  String? userId;
-  String? accessToken;
-  String? refreshToken;
-  int? profileId;
+  String email;
+  String password;
+  String username;
   
+  String? userId;           // Keycloak user ID
+  String? accessToken;      // JWT token
+  String? refreshToken;     // Refresh token
+  int? profileId;          // UserService profile ID
+
   TestUser({
     required this.email,
     required this.password,
@@ -60,19 +118,24 @@ class TestUser {
     this.refreshToken,
     this.profileId,
   });
-  
+
+  /// Factory: Create randomized test user to avoid conflicts
   factory TestUser.random() {
     return TestUser(
       email: TestConfig.generateTestEmail(),
-      password: 'TestPass123!',
+      password: 'Test123!@#',  // Fixed password for all test users
       username: TestConfig.generateTestUsername(),
     );
   }
-  
-  bool get isAuthenticated => accessToken != null && accessToken!.isNotEmpty;
-  bool get hasProfile => profileId != null;
-  
+
+  /// Auth headers for authenticated requests
   Map<String, String> get authHeaders => {
-    if (accessToken != null) 'Authorization': 'Bearer $accessToken',
+    'Authorization': 'Bearer $accessToken',
   };
+
+  /// Check if user has valid auth token
+  bool get isAuthenticated => accessToken != null;
+
+  /// Check if user has profile created
+  bool get hasProfile => profileId != null;
 }
