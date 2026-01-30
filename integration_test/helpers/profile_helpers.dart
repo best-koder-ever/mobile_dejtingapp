@@ -75,8 +75,11 @@ Future<Map<String, dynamic>> updateWizardStep2(
 /// Contract: PATCH /api/wizard/step/3 → 200, OnboardingStatus = Ready
 Future<Map<String, dynamic>> updateWizardStep3(
   TestUser user, {
-  List<int>? photoIds,
+  List<String>? photoUrls,
 }) async {
+  // Default to a mock photo URL if none provided (for testing)
+  final urls = photoUrls ?? ['https://example.com/photos/test-photo-1.jpg'];
+  
   final response = await http.patch(
     Uri.parse('${TestConfig.baseUrl}/api/wizard/step/3'),
     headers: {
@@ -84,7 +87,7 @@ Future<Map<String, dynamic>> updateWizardStep3(
       ...user.authHeaders,
     },
     body: jsonEncode({
-      if (photoIds != null && photoIds.isNotEmpty) 'photoIds': photoIds,
+      'photoUrls': urls,
     }),
   ).timeout(TestConfig.apiTimeout);
 
@@ -93,7 +96,7 @@ Future<Map<String, dynamic>> updateWizardStep3(
   }
 
   final data = jsonDecode(response.body);
-  user.profileId = data['profileId'] ?? data['id'];
+  user.profileId = data['data']?['id'] ?? data['id'];
   return data;
 }
 
