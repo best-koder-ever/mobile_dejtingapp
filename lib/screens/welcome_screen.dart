@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'wizard/phone_entry_screen.dart';
 
 /// Welcome/Login Screen - Based on Stitch variant-02-multiauth design
 /// Changes from variant-01:
@@ -208,8 +209,13 @@ class WelcomeScreen extends StatelessWidget {
                         height: 50,
                         child: ElevatedButton.icon(
                           onPressed: () {
-                            // TODO: Navigate to phone entry screen
-                            _showComingSoon(context, 'Phone Sign-In');
+                            // Navigate to phone entry screen (TASK-010 implemented!)
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const PhoneEntryScreen(),
+                              ),
+                            );
                           },
                           icon: const Icon(Icons.phone, size: 20),
                           label: const Text('Sign in with phone number'),
