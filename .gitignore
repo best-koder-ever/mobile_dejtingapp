@@ -18,9 +18,7 @@ migrate_working_dir/
 *.iws
 .idea/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
+# VS Code (optional)
 #.vscode/
 
 # Flutter/Dart/Pub related
@@ -39,13 +37,29 @@ app.*.symbols
 # Obfuscation related
 app.*.map.json
 
-# Android Studio will place build artifacts here
+# Android Studio build artifacts
 /android/app/debug
 /android/app/profile
 /android/app/release
 
+# Chrome/Chromedriver downloads
 chrome-linux64/
-chrome-linux64.zip
-chrome-linux64.zip.1
+chrome-linux64.zip*
 chromedriver-linux64/
 chromedriver-linux64.zip
+
+# Python virtual environments
+.venv/
+demo_env/
+venv/
+__pycache__/
+
+# Demo/test junk (never commit these)
+*.py
+demo_screenshots/
+e2e-tests/
+monitoring/
+test_assets/
+test_config.env
+test_photo.txt
+photo_service.log
