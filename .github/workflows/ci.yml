@@ -11,11 +11,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
-    name: Build & Test
+  # ── Tier 1: Must pass (blocks merge) ──────────────────────────
+  lint:
+    name: Lint & Analyze
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
@@ -27,14 +27,47 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Analyze
+      - name: Analyze (errors only — blocks PR)
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
-        continue-on-error: true
+
+  # ── Tier 2: Should pass (warns but doesn't block) ─────────────
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.32.1"
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
 
       - name: Run tests
         run: flutter test
-        continue-on-error: true
+        continue-on-error: true  # Warn only until test suite is mature
+
+  # ── Tier 3: Build verification ─────────────────────────────────
+  build:
+    name: Build APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.32.1"
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
 
       - name: Build APK (debug)
         run: flutter build apk --debug
-        continue-on-error: true
+        continue-on-error: true  # Warn until pre-existing compile errors on main are fixed
