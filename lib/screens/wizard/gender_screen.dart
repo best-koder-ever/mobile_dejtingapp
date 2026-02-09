@@ -21,38 +21,37 @@ class _GenderScreenState extends State<GenderScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (_) => StatefulBuilder(
         builder: (ctx, setSheetState) => DraggableScrollableSheet(
-          initialChildSize: 0.85,
+          initialChildSize: 0.7,
           minChildSize: 0.5,
           maxChildSize: 0.95,
           expand: false,
           builder: (_, scrollCtrl) => Column(
             children: [
               const SizedBox(height: 12),
-              Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
-              const SizedBox(height: 16),
-              const Text("Select one that best represents you", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: TextField(
-                  decoration: InputDecoration(
-                    hintText: "Search",
-                    prefixIcon: const Icon(Icons.search),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    filled: true,
-                    fillColor: Colors.grey[100],
-                  ),
+              Container(
+                width: 40, height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 16),
+              const Text(
+                "Select one that best\nrepresents you",
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
               Expanded(
                 child: ListView(
                   controller: scrollCtrl,
                   children: _allOptions.map((g) => RadioListTile<String>(
-                    title: Text(g),
+                    title: Text(g, style: const TextStyle(fontSize: 16)),
                     value: g,
                     groupValue: _selected,
                     activeColor: const Color(0xFFFF6B6B),
@@ -78,8 +77,17 @@ class _GenderScreenState extends State<GenderScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(icon: const Icon(Icons.arrow_back, color: Colors.black), onPressed: () => Navigator.pop(context)),
-        actions: [IconButton(icon: const Icon(Icons.close, color: Colors.black), onPressed: () => Navigator.popUntil(context, (route) => route.isFirst))],
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.close, color: Colors.black),
+            onPressed: () =>
+                Navigator.popUntil(context, (route) => route.isFirst),
+          ),
+        ],
       ),
       body: Stack(
         children: [
@@ -88,7 +96,7 @@ class _GenderScreenState extends State<GenderScreen> {
               ClipRRect(
                 borderRadius: BorderRadius.circular(4),
                 child: LinearProgressIndicator(
-                  value: 0.57,
+                  value: 0.45,
                   backgroundColor: Colors.grey[200],
                   valueColor: const AlwaysStoppedAnimation(Color(0xFFFF6B6B)),
                   minHeight: 4,
@@ -100,7 +108,10 @@ class _GenderScreenState extends State<GenderScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text("What's your gender?", style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
+                      const Text(
+                        "What's your\ngender?",
+                        style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                      ),
                       const SizedBox(height: 40),
                       ..._quickOptions.map((g) => Padding(
                         padding: const EdgeInsets.only(bottom: 12),
@@ -110,11 +121,28 @@ class _GenderScreenState extends State<GenderScreen> {
                           child: OutlinedButton(
                             onPressed: () => setState(() => _selected = g),
                             style: OutlinedButton.styleFrom(
-                              side: BorderSide(color: _selected == g ? const Color(0xFFFF6B6B) : Colors.grey, width: 2),
-                              backgroundColor: _selected == g ? const Color(0xFFFF6B6B).withAlpha(25) : Colors.white,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(27)),
+                              side: BorderSide(
+                                color: _selected == g
+                                    ? const Color(0xFFFF6B6B)
+                                    : Colors.grey,
+                                width: 2,
+                              ),
+                              backgroundColor: _selected == g
+                                  ? const Color(0xFFFF6B6B).withAlpha(25)
+                                  : Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(27),
+                              ),
                             ),
-                            child: Text(g, style: TextStyle(fontSize: 18, color: _selected == g ? const Color(0xFFFF6B6B) : Colors.black)),
+                            child: Text(
+                              g,
+                              style: TextStyle(
+                                fontSize: 18,
+                                color: _selected == g
+                                    ? const Color(0xFFFF6B6B)
+                                    : Colors.black,
+                              ),
+                            ),
                           ),
                         ),
                       )),
@@ -127,18 +155,35 @@ class _GenderScreenState extends State<GenderScreen> {
                             onPressed: _openMore,
                             style: OutlinedButton.styleFrom(
                               side: BorderSide(
-                                color: (_selected != null && !_quickOptions.contains(_selected)) ? const Color(0xFFFF6B6B) : Colors.grey,
+                                color: (_selected != null &&
+                                        !_quickOptions.contains(_selected))
+                                    ? const Color(0xFFFF6B6B)
+                                    : Colors.grey,
                                 width: 2,
                               ),
-                              backgroundColor: (_selected != null && !_quickOptions.contains(_selected)) ? const Color(0xFFFF6B6B).withAlpha(25) : Colors.white,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(27)),
+                              backgroundColor: (_selected != null &&
+                                      !_quickOptions.contains(_selected))
+                                  ? const Color(0xFFFF6B6B).withAlpha(25)
+                                  : Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(27),
+                              ),
                             ),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(
-                                  (_selected != null && !_quickOptions.contains(_selected)) ? _selected! : "More",
-                                  style: TextStyle(fontSize: 18, color: (_selected != null && !_quickOptions.contains(_selected)) ? const Color(0xFFFF6B6B) : Colors.black),
+                                  (_selected != null &&
+                                          !_quickOptions.contains(_selected))
+                                      ? _selected!
+                                      : "More",
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    color: (_selected != null &&
+                                            !_quickOptions.contains(_selected))
+                                        ? const Color(0xFFFF6B6B)
+                                        : Colors.black,
+                                  ),
                                 ),
                                 const SizedBox(width: 8),
                                 const Icon(Icons.arrow_forward_ios, size: 16),
@@ -153,9 +198,15 @@ class _GenderScreenState extends State<GenderScreen> {
                           Checkbox(
                             value: _showOnProfile,
                             activeColor: const Color(0xFFFF6B6B),
-                            onChanged: (v) => setState(() => _showOnProfile = v ?? false),
+                            onChanged: (v) =>
+                                setState(() => _showOnProfile = v ?? false),
                           ),
-                          const Expanded(child: Text("Show my gender on my profile", style: TextStyle(fontSize: 14))),
+                          const Expanded(
+                            child: Text(
+                              "Show my gender on my profile",
+                              style: TextStyle(fontSize: 14),
+                            ),
+                          ),
                         ],
                       ),
                       const Spacer(),
@@ -163,12 +214,22 @@ class _GenderScreenState extends State<GenderScreen> {
                         width: double.infinity,
                         height: 54,
                         child: ElevatedButton(
-                          onPressed: _selected != null ? () => Navigator.pushNamed(context, '/onboarding/orientation') : null,
+                          onPressed: _selected != null
+                              ? () => Navigator.pushNamed(
+                                  context, '/onboarding/orientation')
+                              : null,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: _selected != null ? const Color(0xFFFF6B6B) : Colors.grey,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(27)),
+                            backgroundColor: _selected != null
+                                ? const Color(0xFFFF6B6B)
+                                : Colors.grey,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(27),
+                            ),
                           ),
-                          child: const Text("Next", style: TextStyle(fontSize: 18, color: Colors.white)),
+                          child: const Text(
+                            "Next",
+                            style: TextStyle(fontSize: 18, color: Colors.white),
+                          ),
                         ),
                       ),
                     ],
@@ -178,7 +239,8 @@ class _GenderScreenState extends State<GenderScreen> {
             ],
           ),
           DevModeSkipButton(
-            onSkip: () => Navigator.pushNamed(context, '/onboarding/orientation'),
+            onSkip: () =>
+                Navigator.pushNamed(context, '/onboarding/orientation'),
             label: 'Skip Gender',
           ),
         ],

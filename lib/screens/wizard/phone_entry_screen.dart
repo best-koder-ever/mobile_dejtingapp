@@ -77,7 +77,7 @@ class _PhoneEntryScreenState extends State<PhoneEntryScreen> {
 
   void _handleContinue() {
     if (!_isValidPhone) return;
-    Navigator.pushNamed(context, '/onboarding/community-guidelines');
+    Navigator.pushNamed(context, '/onboarding/verify-code');
   }
 
   @override

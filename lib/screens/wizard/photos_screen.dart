@@ -35,7 +35,7 @@ class _PhotosScreenState extends State<PhotosScreen> {
 
   void _finish() {
     // Navigate to home, clearing the entire onboarding stack
-    Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+    Navigator.pushNamed(context, '/onboarding/lifestyle');
   }
 
   @override
