@@ -1,0 +1,70 @@
+# Match Celebration - Variant 01: Coral Light
+
+component: match-celebration
+variant: variant-01-coral
+theme: coral-light
+status: exploring
+
+# Which user stories use this component?
+user_stories:
+  - US2  # Discovery - celebration when mutual match occurs
+
+# Which Flutter screens show this component?
+screens:
+  - lib/matches_screen.dart  # Triggers after successful mutual like
+
+# Design metadata
+created: 2026-02-03
+author: Stitch AI (Gemini 3 Flash)
+stitch_project_id: "8469203751545122197"
+stitch_screen_id: "78f0997e7da04eab9397d98c3984ae60"
+
+# Implementation tracking
+implementation_status: not_started
+flutter_widget_path: null
+widgetbook_story_path: null
+
+# Design notes
+notes: |
+  Second AI-generated design from Google Stitch. Created to match the ProfileCard aesthetic.
+  
+  Key features:
+  - Dark background (#191022) matching ProfileCard dark mode
+  - Two circular profile photos side-by-side with purple glow effect
+  - Large "It's a Match!" heading in white bold text
+  - Subtitle: "You and Sophia liked each other"
+  - Primary action: "Send Message" button (purple gradient #7f13ec)
+  - Secondary action: "Keep Swiping" button (white outline)
+  - Plus Jakarta Sans typography (consistent with ProfileCard)
+  - Material shadows and rounded corners matching ProfileCard style
+  
+  Generated with prompt: "Create a 'It's a Match!' celebration screen matching the profile card design style..."
+
+strengths:
+  - Consistent theme with ProfileCard (same purple, same typography, same shadows)
+  - Clear visual hierarchy (photos → heading → subtitle → actions)
+  - Purple glow around photos creates celebration feel without animation
+  - Two action choices give user control (message now vs continue browsing)
+  - Dark background focuses attention on the match
+
+concerns:
+  - Static design without animation (real implementation should add confetti/sparkles)
+  - May need "Close" button in top-right for users who want to dismiss quickly
+  - Profile photo size could be larger for more impact
+  - Secondary button (Keep Swiping) might reduce message conversion rate
+
+alternative_variants:
+  - variant-02-animated: Add confetti animation, pulsing photos
+  - variant-03-minimal: Simpler layout with single "Say Hi" button
+  - variant-04-fullscreen: Larger photos, full-bleed background
+
+next_steps:
+  - Add to Flutter as dialog/full-screen modal
+  - Implement with animation (confetti particles, fade-in)
+  - A/B test single vs dual action buttons
+  - Consider haptic feedback on display
+
+# Technical files
+html_file: design.html
+preview_file: preview.png
+stitch_download_url: https://lh3.googleusercontent.com/aida/AOfcidWjasZC1XIA5J1v0Abnt4wlLdOVLLHtIyYJky95lHDoGWBuGdZsqR0FK10T1sDg-nPqN8t_PhXE2jBd6CYmrfZaYgN-STRQicM8xTok_RCOQ8U5xmL1Oz-g8EBtM-yFD1KKhXX8uMDOvKcJzVeevTeGfZnSNXZONYwg7c35MauLToQOYqIMS7eU6ZPodFbp7eR8mHa0EWo7FJJpDGbSNdHob1D1YqbgqSzVetCWJEgRLbFBEqHIDv8ECok

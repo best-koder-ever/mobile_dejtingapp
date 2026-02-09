@@ -1,0 +1,68 @@
+# ProfileCard - Variant 01: Coral Light
+
+component: profile-card
+variant: variant-01-coral
+theme: coral-light
+status: implemented
+
+# Which user stories use this component?
+user_stories:
+  - US1  # Profile creation - user sees preview of their profile
+  - US2  # Discovery - swiping through candidate profiles
+  - US4  # Safety - viewing blocked user profiles (read-only)
+
+# Which Flutter screens show this component?
+screens:
+  - lib/screens/onboarding_wizard_screen.dart  # US1: Profile preview
+  - lib/swipe_screen.dart                      # US2: Discovery swipe
+  - lib/profile_screen.dart                    # US4: View others' profiles
+
+# Design metadata
+created: 2026-02-03
+author: Stitch AI (Gemini 3 Flash)
+stitch_project_id: "8469203751545122197"
+stitch_screen_id: "2f35fe61f38c4a3a95cafb9fc59e7e6e"
+
+# Implementation tracking
+implementation_status: complete
+flutter_widget_path: lib/widgets/discovery/profile_card.dart
+widgetbook_story_path: lib/widgetbook/discovery/profile_card.stories.dart
+
+# Design notes
+notes: |
+  First AI-generated design from Google Stitch. This became our production ProfileCard.
+  
+  Key features:
+  - Large portrait photo (3:4 aspect ratio)
+  - Dark gradient overlay at bottom (ensures text readability)
+  - Purple gradient "92% match" badge (top-right)
+  - Bold white typography: "Sophia, 24"
+  - Semi-transparent bio text
+  - 3 circular action buttons: Pass (white/X), Like (red/heart), Super Like (teal/star)
+  - Material Design shadows and elevation
+  - Hover animations on buttons
+  
+  Generated with prompt: "Create a modern dating app profile card for mobile..."
+
+strengths:
+  - Professional gradient overlay solves text readability on varied photo backgrounds
+  - Clear visual hierarchy (photo → name → bio → actions)
+  - Match badge is attention-grabbing but not overwhelming
+  - Action buttons follow industry standards (Tinder/Bumble pattern)
+  - Plus Jakarta Sans typography is modern and readable
+
+concerns:
+  - 3:4 aspect ratio crops some photos significantly
+  - Match badge position might conflict with photo composition in some cases
+  - Super Like button color (teal) doesn't align with brand purple
+  - No dark mode variant yet
+
+alternative_variants:
+  - variant-02-purple: Stronger purple theme, Material 3 tokens
+  - variant-03-minimal: Cleaner design with less overlay
+  - variant-04-dark: Dark mode optimized version
+
+# Technical files
+html_file: design.html
+preview_file: preview.png
+stitch_download_url: https://lh3.googleusercontent.com/aida/AOfcidVwi_eS_zoBC5QlSiQ68Lp54Z1uW4T3QTpOs6nUV1X8BnjfOqB0pmEB4EhgjNEnXnbKPaLSQi_0RQ--csebmU2xzr3U7AxaB2uREXxNshH0KFyZDdFLibtELlVdpEwPuPMUFpMsfHqm5ZIillX-gA5azPN22fGyEpxGT-8cWCDbUOMFjhW8KtAwGM8wWns3UQxL4pcvLGBj_4jXsadKCeNLgeFK_hQVDRS4eTbZ0_LJ39IpKWPbafcnv6A

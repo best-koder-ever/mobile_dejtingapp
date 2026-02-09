@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Dating Profile Card</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#7f13ec",
+                        "background-light": "#f7f6f8",
+                        "background-dark": "#191022",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans"]
+                    },
+                    borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .profile-gradient {
+            background: linear-gradient(180deg, rgba(0,0,0,0) 50%, rgba(25,16,34,0.95) 100%);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display antialiased">
+<div class="relative flex min-h-screen w-full flex-col max-w-md mx-auto overflow-hidden shadow-2xl">
+<!-- Top App Bar -->
+<div class="flex items-center bg-transparent p-4 pb-2 justify-between absolute top-0 left-0 w-full z-20">
+<div class="flex size-10 shrink-0 items-center justify-center bg-white/20 backdrop-blur-md rounded-full">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-8" data-alt="User profile mini avatar" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAwJq3hVcPAIXM1GYgTLm8iIjHI700_VYyIAIB3WF05NgYOni3JbPMOGmcgUzdnyhjT2JRc86wE4J5dgj87MOJc1188LkrGLzDv9zDeMg6xtvyJvFJv923YT54RXZJBbIwXutwAPlPSJQgLPRxLw1ojxkz-XaenjaJnFJjBZBw1Xp2Hx1G6lvDwjLQCg97AAIilFgz2dHeyUVsNiQHaYe76SkPkT6xhLqO29qB9A9uVdS1-Nt_UUK9zivAn4sTf42-1MDY2OlDLhKI");'>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-white text-lg font-bold tracking-tight">Discover</span>
+</div>
+<div class="flex w-10 items-center justify-end">
+<button class="flex size-10 cursor-pointer items-center justify-center rounded-full bg-white/20 backdrop-blur-md text-white">
+<span class="material-symbols-outlined">tune</span>
+</button>
+</div>
+</div>
+<!-- Main Card Section -->
+<div class="flex-1 p-4 pt-16 flex flex-col justify-end relative">
+<!-- Background Image with Gradient Pill -->
+<div class="absolute inset-4 rounded-xl overflow-hidden shadow-xl">
+<div class="w-full h-full bg-cover bg-center" data-alt="High quality portrait of a smiling woman" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCr0thqIpsM76VeQU_5Vk21vCcsZPtUXMvIuqTWHn0-Q46yGHY0C5A_tasGMB-QHNDlExjLkbmQPmZrJlPL-C-Dhg1yCJuRAvNJwsVTsDFWYHTEJT4dJwmBeTF5Xma-A9XSvkyP_AkoMU37Q6JHlNSsEszEGd4mg3IVqj2vqTHZ-iJSmJksBS9z8ALBATl9glzBuC07CBusmSazG-0ZYhTI5iVfe0uE051-mcw02jAKS2QZxxPVrRCa4qj6avtE6yc46YfYbpSTu68");'>
+<div class="profile-gradient w-full h-full absolute inset-0"></div>
+</div>
+<!-- Match Badge -->
+<div class="absolute top-4 right-4 bg-gradient-to-r from-primary to-[#b165ff] px-4 py-1.5 rounded-full flex items-center gap-2 shadow-lg">
+<span class="material-symbols-outlined text-white text-[18px]">local_fire_department</span>
+<span class="text-white text-sm font-bold leading-none">92% match</span>
+</div>
+</div>
+<!-- Profile Details Content -->
+<div class="relative z-10 px-4 pb-6 mt-auto">
+<div class="flex items-end justify-between mb-2">
+<div class="flex flex-col">
+<h2 class="text-white text-4xl font-bold tracking-tight">Sophia, 24</h2>
+<p class="text-white/80 text-base font-medium mt-1 max-w-[280px] leading-snug">
+                            Coffee lover, hiker, and amateur photographer. Let's explore the city together!
+                        </p>
+</div>
+<button class="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-white shadow-lg">
+<span class="material-symbols-outlined text-[20px]">info</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Action Buttons Container -->
+<div class="px-6 pb-12 pt-2">
+<div class="flex items-center justify-center gap-6">
+<!-- Pass Button -->
+<button class="flex size-14 items-center justify-center rounded-full bg-white dark:bg-[#302839] text-[#7c7c7c] shadow-xl hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-[32px]">close</span>
+</button>
+<!-- Like Button (Centerpiece) -->
+<button class="flex size-20 items-center justify-center rounded-full bg-primary text-white shadow-[0_10px_25px_-5px_rgba(127,19,236,0.5)] hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-[44px]">favorite</span>
+</button>
+<!-- Super Like Button -->
+<button class="flex size-14 items-center justify-center rounded-full bg-[#00d2d3] text-white shadow-xl hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-[32px]">star</span>
+</button>
+</div>
+</div>
+<!-- Bottom Nav Bar -->
+<div class="border-t border-[#302839] bg-[#211c27] px-4 pb-6 pt-3 mt-auto">
+<div class="flex justify-around items-center">
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined text-[28px]">style</span>
+<span class="text-[10px] font-bold">Discover</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-[#ab9db9]" href="#">
+<span class="material-symbols-outlined text-[28px]">favorite</span>
+<span class="text-[10px] font-medium">Likes</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-[#ab9db9]" href="#">
+<span class="material-symbols-outlined text-[28px]">chat_bubble</span>
+<span class="text-[10px] font-medium">Chats</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-[#ab9db9]" href="#">
+<span class="material-symbols-outlined text-[28px]">person</span>
+<span class="text-[10px] font-medium">Profile</span>
+</a>
+</div>
+</div>
+</div>
+</body></html>

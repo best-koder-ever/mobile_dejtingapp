@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/dev_mode_banner.dart';
 
 class BirthdayScreen extends StatefulWidget {
   const BirthdayScreen({super.key});
@@ -17,13 +18,8 @@ class _BirthdayScreenState extends State<BirthdayScreen> {
     final y = int.tryParse(_yearCtrl.text);
     if (d == null || y == null) return false;
     if (y < 1900 || y > DateTime.now().year) return false;
-    if (d < 1 || d > _daysInMonth(_month!, y)) return false;
-    final age = _calcAge(DateTime(y, _month!, d));
-    return age >= 18;
-  }
-
-  int _daysInMonth(int month, int year) {
-    return DateUtils.getDaysInMonth(year, month);
+    if (d < 1 || d > DateUtils.getDaysInMonth(y, _month!)) return false;
+    return _calcAge(DateTime(y, _month!, d)) >= 18;
   }
 
   int _calcAge(DateTime dob) {
@@ -62,6 +58,13 @@ class _BirthdayScreenState extends State<BirthdayScreen> {
   }
 
   @override
+  void dispose() {
+    _dayCtrl.dispose();
+    _yearCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
@@ -71,66 +74,82 @@ class _BirthdayScreenState extends State<BirthdayScreen> {
         leading: IconButton(icon: const Icon(Icons.arrow_back, color: Colors.black), onPressed: () => Navigator.pop(context)),
         actions: [IconButton(icon: const Icon(Icons.close, color: Colors.black), onPressed: () => Navigator.popUntil(context, (route) => route.isFirst))],
       ),
-      body: Column(
+      body: Stack(
         children: [
-          LinearProgressIndicator(value: 0.3, backgroundColor: Colors.grey[200], valueColor: const AlwaysStoppedAnimation(Color(0xFFFF6B6B))),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text("Your b-day?", style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 40),
-                  Row(
+          Column(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: 0.42,
+                  backgroundColor: Colors.grey[200],
+                  valueColor: const AlwaysStoppedAnimation(Color(0xFFFF6B6B)),
+                  minHeight: 4,
+                ),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        flex: 3,
-                        child: DropdownButtonFormField<int>(
-                          value: _month,
-                          decoration: const InputDecoration(labelText: "Month", border: OutlineInputBorder()),
-                          items: List.generate(12, (i) => DropdownMenuItem(value: i + 1, child: Text("${i + 1}"))),
-                          onChanged: (v) => setState(() => _month = v),
-                        ),
+                      const Text("Your b-day?", style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 40),
+                      Row(
+                        children: [
+                          Expanded(
+                            flex: 3,
+                            child: DropdownButtonFormField<int>(
+                              value: _month,
+                              decoration: const InputDecoration(labelText: "Month", border: OutlineInputBorder()),
+                              items: List.generate(12, (i) => DropdownMenuItem(value: i + 1, child: Text("${i + 1}"))),
+                              onChanged: (v) => setState(() => _month = v),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            flex: 2,
+                            child: TextField(
+                              controller: _dayCtrl,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(labelText: "Day", border: OutlineInputBorder()),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            flex: 3,
+                            child: TextField(
+                              controller: _yearCtrl,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(labelText: "Year", border: OutlineInputBorder()),
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        flex: 2,
-                        child: TextField(
-                          controller: _dayCtrl,
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(labelText: "Day", border: OutlineInputBorder()),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        flex: 3,
-                        child: TextField(
-                          controller: _yearCtrl,
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(labelText: "Year", border: OutlineInputBorder()),
+                      const SizedBox(height: 16),
+                      Text("Your profile shows your age, not your birthdate.", style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+                      const Spacer(),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 54,
+                        child: ElevatedButton(
+                          onPressed: _isValid ? _next : null,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _isValid ? const Color(0xFFFF6B6B) : Colors.grey,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(27)),
+                          ),
+                          child: const Text("Next", style: TextStyle(fontSize: 18, color: Colors.white)),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  Text("Your profile shows your age, not your birthdate.", style: TextStyle(fontSize: 14, color: Colors.grey[600])),
-                  const Spacer(),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 54,
-                    child: ElevatedButton(
-                      onPressed: _isValid ? _next : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _isValid ? const Color(0xFFFF6B6B) : Colors.grey,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(27)),
-                      ),
-                      child: const Text("Next", style: TextStyle(fontSize: 18, color: Colors.white)),
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
+            ],
+          ),
+          DevModeSkipButton(
+            onSkip: () => Navigator.pushNamed(context, '/onboarding/gender'),
+            label: 'Skip Birthday',
           ),
         ],
       ),

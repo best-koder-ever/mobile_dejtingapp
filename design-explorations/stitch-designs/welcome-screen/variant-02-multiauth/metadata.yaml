@@ -1,0 +1,53 @@
+component: welcome-screen
+variant: 02
+theme: multiauth
+status: exploring
+user_stories:
+  - US1
+design_date: 2026-02-06
+stitch_screen_id: 006b8d9982f44ce8852a9046d1621c61
+
+features:
+  - Multi-authentication options (Google, Phone)
+  - Dark modal overlay
+  - Coral-to-purple gradient background
+  - Terms acceptance text
+  - App store download links
+  - "Trouble Logging In?" support link
+
+removed_from_v01:
+  - "92% match accuracy" marketing text
+  - "Privacy First" marketing text  
+  - "Real Conversations" marketing text
+
+backend_impacts:
+  - type: authentication
+    description: Keycloak Google OAuth provider configuration
+  - type: authentication
+    description: Phone number authentication with SMS verification
+  - type: api
+    description: Handle multiple auth provider callbacks
+  - type: database
+    description: Store auth provider type per user
+
+implementation_status: not_started
+flutter_widget_path: null
+
+design_decisions:
+  - Tinder-style modal approach for better focus
+  - Google as primary CTA (blue button)
+  - Phone as secondary (dark button)
+  - App store links for user acquisition
+
+strengths:
+  - Professional authentication UX
+  - Multiple login options reduce friction
+  - Clear visual hierarchy
+
+concerns:
+  - Need SMS provider integration (Twilio?)
+  - Google OAuth setup complexity
+  - ⚠️ CRITICAL: Terms/Privacy/Cookie links MUST be real URLs before launch
+  - ⚠️ LEGAL BLOCKER: App Store requires functional privacy policy URL
+  - ⚠️ GDPR REQUIREMENT: Privacy policy mandatory for EU users
+  - See LEGAL_REQUIREMENTS.md in project root for full details

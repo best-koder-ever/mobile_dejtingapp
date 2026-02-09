@@ -1,0 +1,155 @@
+# Chat Interface - Variant 03: Mutual Conversation Prompts
+
+component: chat-interface
+variant: variant-03-mutual-prompts
+theme: coral-light
+status: exploring
+
+user_stories:
+  - US3  # Secure match messaging with conversation depth tools
+
+screens:
+  - lib/matches_screen.dart  # Chat with ice-breaker prompts
+
+created: 2026-02-03
+author: Stitch AI (Gemini 3 Flash)
+stitch_project_id: "8469203751545122197"
+stitch_screen_id: "73602b3b7f62402e944b36de4f7af303"
+
+implementation_status: not_started
+flutter_widget_path: null
+widgetbook_story_path: null
+
+notes: |
+  ⭐ BREAKTHROUGH FEATURE - Mutual conversation starters!
+  
+  **The Problem This Solves:**
+  Users get stuck in "hello, how are you" small talk and conversations die.
+  One-sided AI suggestions feel pushy.
+  
+  **The Solution:**
+  Conversation Starter Cards that BOTH people engage with together.
+  
+  **How It Works:**
+  
+  1. **Card in Chat Flow:**
+     - Appears naturally in the message thread
+     - Soft purple-tinted background with glowing border
+     - Sparkle icon ✨ and "💭 Ice Breaker Question" header
+  
+  2. **The Question:**
+     - "What's your go-to comfort food?"
+     - (Other examples: "Most memorable travel experience?", "Hidden talent?")
+  
+  3. **Side-by-Side Answers:**
+     - Left: "Sophia: Homemade Ramen 🍜" ✓
+     - Right: "You: Authentic Tacos 🌮" ✓
+     - Equal visual weight - collaborative, not competitive
+     - Green checkmarks when both answered
+  
+  4. **Next Question Button:**
+     - "Next Question ➡️" at bottom of card
+     - Loads another prompt when both want more
+  
+  5. **Natural Flow:**
+     - Regular messages above and below
+     - Card doesn't interrupt - feels like shared discovery
+     - Can have multiple cards in one conversation
+  
+  **Design Details:**
+  - Purple theme (#7f13ec) maintained
+  - Plus Jakarta Sans typography
+  - Sent bubbles: purple gradient
+  - Received bubbles: light gray
+  - Card has subtle elevation/shadow
+  - Typing indicator below
+  - Clean input bar with send button
+
+strengths:
+  - COLLABORATIVE not one-sided - both people participate equally
+  - Breaks the "hello how are you" ice naturally
+  - Answers build connection and shared knowledge
+  - Feels playful and game-like (not forced)
+  - Cards flow in conversation - don't block or interrupt
+  - Can see what you both answered - easy comparison
+  - "Next Question" keeps momentum going
+  - Reduces pressure - structured prompts easier than freeform
+  - Great for introverts or shy users
+  - Creates conversation topics organically
+
+concerns:
+  - How to decide WHEN to show a prompt card?
+  - Who triggers "Next Question" - either person or both?
+  - What if one person ignores the prompt?
+  - Need large question database (100+ prompts)
+  - Prompt quality critical - boring questions kill engagement
+  - May feel juvenile if not executed well
+  - Privacy: are answers saved/shared beyond this chat?
+
+comparison_with_other_variants:
+  variant_01_coral:
+    - Traditional chat only
+    - No conversation help
+  variant_02_futuristic:
+    - One-sided AI suggestions ("Ask about trip to Japan")
+    - Asymmetric - only helps one person
+    - Can feel pushy
+  variant_03_mutual_prompts:
+    - Both people answer together
+    - Symmetric and collaborative
+    - Natural ice-breaker tool
+    - Less pressure than freeform
+
+implementation_approach:
+  backend:
+    - Prompt database with categories (travel, food, hobbies, values)
+    - API endpoint: GET /conversation-prompts/next?chat_id=123
+    - Store both answers in chat thread
+    - Track which prompts already shown in this chat
+  
+  frontend:
+    - Card widget that inserts in message stream
+    - Text input for answer (replaced with checkmark + answer when submitted)
+    - "Next Question" button shows new prompt
+    - Animation: card slides in gently when triggered
+  
+  timing_triggers:
+    - Option 1: User manually taps "Ice Breaker" button in chat
+    - Option 2: Auto-suggest after 5 messages if conversation slowing
+    - Option 3: Show at match time: "Break the ice with a question!"
+  
+  prompt_categories:
+    - Light & Fun: comfort food, weekend plans, coffee order
+    - Travel: best trip, dream destination, most unusual place
+    - Personality: hidden talent, morning/night person, superpower
+    - Deeper: life philosophy, proudest accomplishment, scary thing done
+  
+  gamification:
+    - "You've answered 10 prompts together! 🎉"
+    - Unlock new categories after X prompts
+    - Share favorite prompt answers on profile
+
+alternative_variants:
+  - variant-04-prompt-gallery: Full screen to browse all available prompts
+  - variant-05-voice-prompts: Audio responses instead of text
+  - variant-06-photo-prompts: "Show me your comfort food!" with photo answers
+
+next_steps:
+  - Build prompt database (start with 50 diverse questions)
+  - User test: do people actually answer? Which prompts work best?
+  - A/B test: manual trigger vs auto-suggest timing
+  - Design full "Ice Breaker Library" screen (Stitch suggestion!)
+  - Consider "Shared Moments" gallery of all answered prompts
+
+user_feedback_addressed:
+  - "not something that get in between the conversation" → Card flows naturally in thread ✓
+  - "for both, not just one side" → Side-by-side answers, equal participation ✓
+  - "keeps thing more flowing" → Next Question button, structured prompts ✓
+  - "both can answer same question" → That's the core mechanic ✓
+  - "see each other's answers" → Displayed side-by-side in card ✓
+  - "get to know each other" → Prompts reveal personality, interests ✓
+  - "not stuck in hello how are you" → Skips small talk, goes deeper ✓
+
+html_file: design.html
+preview_file: preview.png
+stitch_download_url: https://lh3.googleusercontent.com/aida/AOfcidX9Wi4v4mkm7HudBpWoCDPYlcsLaNAgYkNyYX-WuHAAJpaJElymhpPNtN1DgpwdKNScirz2xPl0LY5dR-3h3pmnqSP0Z_jvJ7pVtN-Y4ELNDignsTX2rywmSmRFaCxEgf_rv2P0A3bdnPl0_vG820Ib7OKzRKJDC8P3QucEHx3K6D3Ln8nDrL-kYCcv16-OSC2IWq4NX4dDJr1PLP7MAFk74meTeKOOEku-RJHoRiOMpI4aSGELHe55a2c

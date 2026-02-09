@@ -1,0 +1,69 @@
+# Chat Interface - Variant 01: Coral Light
+
+component: chat-interface
+variant: variant-01-coral
+theme: coral-light
+status: exploring
+
+user_stories:
+  - US3  # Secure match messaging
+
+screens:
+  - lib/matches_screen.dart  # Chat view when tapping matched user
+
+created: 2026-02-03
+author: Stitch AI (Gemini 3 Flash)
+stitch_project_id: "8469203751545122197"
+stitch_screen_id: "55f8f8798d814626b15bc522b185369a"
+
+implementation_status: not_started
+flutter_widget_path: null
+widgetbook_story_path: null
+
+notes: |
+  Third AI-generated design. Much more interesting than the match celebration!
+  
+  Key features:
+  - Top app bar: back button, match photo + name, menu (3-dot)
+  - Light grey background with subtle pattern
+  - Message bubbles:
+    * Received: white with shadow, dark text, left-aligned
+    * Sent: purple gradient (#7f13ec), white text, right-aligned
+    * 16px rounded corners
+  - Typing indicator: "Sophia is typing..."
+  - Message input: white rounded field, placeholder text
+  - Purple send button with paper plane icon
+  - Photo/emoji attachment icons
+  - Plus Jakarta Sans typography
+  - Clean Material Design aesthetic
+
+strengths:
+  - Much more dynamic and interesting than celebration screen
+  - Clear visual distinction between sent/received messages (color + alignment)
+  - Typing indicator adds life to the conversation
+  - Multiple interaction points (send, photo, emoji)
+  - Professional chat UI matching industry standards
+  - Good use of purple accent for actions (send button, sent messages)
+
+concerns:
+  - Light background might be harsh in dark mode
+  - Need to add timestamps to messages
+  - Read receipts (checkmarks) not very visible
+  - May need "online" status indicator in top bar
+  - Attachment icons might be too small for touch targets
+
+alternative_variants:
+  - variant-02-dark: Dark background for night usage
+  - variant-03-minimal: Simpler bubbles, less decoration
+  - variant-04-feature-rich: Voice messages, reactions, GIF support
+
+next_steps:
+  - Implement with Flutter SignalR integration
+  - Add real-time typing detection
+  - Consider dark mode variant
+  - Test message bubble layout with long messages
+  - Add image preview in chat
+
+html_file: design.html
+preview_file: preview.png
+stitch_download_url: https://lh3.googleusercontent.com/aida/AOfcidUzfhVTYiILol1ZyLsFfYpms9VkkskmNTHsvyK6CYIkjm3XD98rIRhJAcuA29-AvILx_jVZMKDd2JPUCKnzrxsD1OChkQ33FptZwsG50p98nGE9-PAJOZSHauDlpwMc_wZfJArZO4TBgcolOdR8MJzbwzivjWo_hChegjNa5UGaLUVrwZLIC30gKZwyPzDYilM9NSdl7_xJKwZ9klGWyzGLbiCxqNpGaW-ehOe2SJiNxH7mQMBAlIRJXek

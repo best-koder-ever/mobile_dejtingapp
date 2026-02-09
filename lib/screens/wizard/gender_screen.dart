@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/dev_mode_banner.dart';
 
 class GenderScreen extends StatefulWidget {
   const GenderScreen({super.key});
@@ -80,89 +81,105 @@ class _GenderScreenState extends State<GenderScreen> {
         leading: IconButton(icon: const Icon(Icons.arrow_back, color: Colors.black), onPressed: () => Navigator.pop(context)),
         actions: [IconButton(icon: const Icon(Icons.close, color: Colors.black), onPressed: () => Navigator.popUntil(context, (route) => route.isFirst))],
       ),
-      body: Column(
+      body: Stack(
         children: [
-          LinearProgressIndicator(value: 0.4, backgroundColor: Colors.grey[200], valueColor: const AlwaysStoppedAnimation(Color(0xFFFF6B6B))),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text("What's your gender?", style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 40),
-                  ..._quickOptions.map((g) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: SizedBox(
-                      width: double.infinity,
-                      height: 54,
-                      child: OutlinedButton(
-                        onPressed: () => setState(() => _selected = g),
-                        style: OutlinedButton.styleFrom(
-                          side: BorderSide(color: _selected == g ? const Color(0xFFFF6B6B) : Colors.grey, width: 2),
-                          backgroundColor: _selected == g ? const Color(0xFFFF6B6B).withOpacity(0.1) : Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(27)),
-                        ),
-                        child: Text(g, style: TextStyle(fontSize: 18, color: _selected == g ? const Color(0xFFFF6B6B) : Colors.black)),
-                      ),
-                    ),
-                  )),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: SizedBox(
-                      width: double.infinity,
-                      height: 54,
-                      child: OutlinedButton(
-                        onPressed: _openMore,
-                        style: OutlinedButton.styleFrom(
-                          side: BorderSide(
-                            color: (_selected != null && !_quickOptions.contains(_selected)) ? const Color(0xFFFF6B6B) : Colors.grey,
-                            width: 2,
-                          ),
-                          backgroundColor: (_selected != null && !_quickOptions.contains(_selected)) ? const Color(0xFFFF6B6B).withOpacity(0.1) : Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(27)),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              (_selected != null && !_quickOptions.contains(_selected)) ? _selected! : "More",
-                              style: TextStyle(fontSize: 18, color: (_selected != null && !_quickOptions.contains(_selected)) ? const Color(0xFFFF6B6B) : Colors.black),
-                            ),
-                            const SizedBox(width: 8),
-                            const Icon(Icons.arrow_forward_ios, size: 16),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
+          Column(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: 0.57,
+                  backgroundColor: Colors.grey[200],
+                  valueColor: const AlwaysStoppedAnimation(Color(0xFFFF6B6B)),
+                  minHeight: 4,
+                ),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Checkbox(
-                        value: _showOnProfile,
-                        activeColor: const Color(0xFFFF6B6B),
-                        onChanged: (v) => setState(() => _showOnProfile = v ?? false),
+                      const Text("What's your gender?", style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 40),
+                      ..._quickOptions.map((g) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: SizedBox(
+                          width: double.infinity,
+                          height: 54,
+                          child: OutlinedButton(
+                            onPressed: () => setState(() => _selected = g),
+                            style: OutlinedButton.styleFrom(
+                              side: BorderSide(color: _selected == g ? const Color(0xFFFF6B6B) : Colors.grey, width: 2),
+                              backgroundColor: _selected == g ? const Color(0xFFFF6B6B).withAlpha(25) : Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(27)),
+                            ),
+                            child: Text(g, style: TextStyle(fontSize: 18, color: _selected == g ? const Color(0xFFFF6B6B) : Colors.black)),
+                          ),
+                        ),
+                      )),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: SizedBox(
+                          width: double.infinity,
+                          height: 54,
+                          child: OutlinedButton(
+                            onPressed: _openMore,
+                            style: OutlinedButton.styleFrom(
+                              side: BorderSide(
+                                color: (_selected != null && !_quickOptions.contains(_selected)) ? const Color(0xFFFF6B6B) : Colors.grey,
+                                width: 2,
+                              ),
+                              backgroundColor: (_selected != null && !_quickOptions.contains(_selected)) ? const Color(0xFFFF6B6B).withAlpha(25) : Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(27)),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  (_selected != null && !_quickOptions.contains(_selected)) ? _selected! : "More",
+                                  style: TextStyle(fontSize: 18, color: (_selected != null && !_quickOptions.contains(_selected)) ? const Color(0xFFFF6B6B) : Colors.black),
+                                ),
+                                const SizedBox(width: 8),
+                                const Icon(Icons.arrow_forward_ios, size: 16),
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
-                      const Expanded(child: Text("Show my gender on my profile", style: TextStyle(fontSize: 14))),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Checkbox(
+                            value: _showOnProfile,
+                            activeColor: const Color(0xFFFF6B6B),
+                            onChanged: (v) => setState(() => _showOnProfile = v ?? false),
+                          ),
+                          const Expanded(child: Text("Show my gender on my profile", style: TextStyle(fontSize: 14))),
+                        ],
+                      ),
+                      const Spacer(),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 54,
+                        child: ElevatedButton(
+                          onPressed: _selected != null ? () => Navigator.pushNamed(context, '/onboarding/orientation') : null,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _selected != null ? const Color(0xFFFF6B6B) : Colors.grey,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(27)),
+                          ),
+                          child: const Text("Next", style: TextStyle(fontSize: 18, color: Colors.white)),
+                        ),
+                      ),
                     ],
                   ),
-                  const Spacer(),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 54,
-                    child: ElevatedButton(
-                      onPressed: _selected != null ? () => Navigator.pushNamed(context, '/onboarding/photos') : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _selected != null ? const Color(0xFFFF6B6B) : Colors.grey,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(27)),
-                      ),
-                      child: const Text("Next", style: TextStyle(fontSize: 18, color: Colors.white)),
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
+            ],
+          ),
+          DevModeSkipButton(
+            onSkip: () => Navigator.pushNamed(context, '/onboarding/orientation'),
+            label: 'Skip Gender',
           ),
         ],
       ),

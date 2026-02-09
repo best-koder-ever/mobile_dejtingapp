@@ -1,0 +1,86 @@
+component: account-consent
+variant: 01
+theme: flutter-implementation
+status: implemented
+user_stories:
+  - US1
+design_date: 2026-02-06
+screen_number: 1.5
+position: Between Welcome Screen and Wizard Basic Info
+
+description: |
+  Account consent and language selection screen that appears after OAuth
+  (Google/Phone/Apple) login but before the profile creation wizard.
+  Critical for GDPR compliance and language preference collection.
+
+features:
+  - OAuth account confirmation (shows user email/name)
+  - "Use another account" option
+  - Legal consent text with clickable Privacy/Terms links
+  - Language selector (Svenska/English)
+  - Footer help/privacy/terms links
+  - Prominent "Continue" CTA button
+  - Back and close navigation
+
+flow:
+  - User clicks "Continue with Google" on Welcome Screen
+  - Google OAuth flow (handled by Google)
+  - User lands on THIS screen (account consent)
+  - User reviews account, reads policies, selects language
+  - User clicks "Continue"
+  - Proceeds to Wizard Basic Info (Step 1/3)
+
+backend_impacts:
+  - type: oauth
+    description: Handle OAuth callback and extract user info (email, name, photo)
+  - type: i18n
+    description: Store user language preference (sv, en)
+  - type: database
+    description: Add preferred_language field to user profile
+  - type: legal
+    description: Same privacy/terms URLs as Welcome Screen (must be real)
+
+implementation_status: flutter_implemented
+flutter_widget_path: lib/screens/account_consent_screen.dart
+
+design_decisions:
+  - Implemented directly in Flutter (Stitch unavailable during creation)
+  - Follows Tinder's consent screen pattern (industry standard)
+  - Bilingual (Swedish primary, English fallback)
+  - Links to privacy/terms REQUIRED by GDPR
+  - "Use another account" allows changing OAuth account
+
+strengths:
+  - GDPR compliant (informed consent with policy links)
+  - Professional OAuth UX pattern
+  - Clear language selection
+  - Matches DejTing brand (coral/purple gradient)
+  - Fully functional implementation ready
+
+concerns:
+  - ⚠️ Privacy/Terms URLs must be real before launch (see LEGAL_REQUIREMENTS.md)
+  - Need actual OAuth integration (Google/Apple/Phone)
+  - Language preference must sync to backend
+  - Should add more languages post-MVP (Norwegian, Danish, Finnish)
+
+missing_from_stitch:
+  - Stitch was unavailable, so no AI-generated mockup exists
+  - Consider generating Stitch design later for design system consistency
+  - Current Flutter implementation can serve as reference
+
+estimated_stitch_prompt: |
+  "Create mobile account consent screen for dating app. Clean white background,
+  app logo at top, 'Choose an account' heading, user profile card with photo/email,
+  legal text with underlined privacy/terms links, Swedish/English language dropdown,
+  help/privacy/terms footer links, coral-purple gradient Continue button. 
+  Professional, minimal design like Tinder OAuth consent screen."
+
+related_screens:
+  - welcome-screen (comes before this)
+  - wizard-basic-info (comes after this)
+
+legal_requirements:
+  - Must show privacy policy and terms links (GDPR Article 13)
+  - Links must be functional (not placeholder text)
+  - User must be able to access policies before continuing
+  - Language preference affects policy language shown
