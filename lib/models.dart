@@ -462,3 +462,111 @@ enum MessageType {
   image,
   emoji,
 }
+
+/// A candidate profile returned by the matchmaking service for swiping
+class MatchCandidate {
+  final String userId;
+  final String displayName;
+  final String? photoUrl;
+  final List<String> photoUrls;
+  final int age;
+  final String? bio;
+  final String? city;
+  final double? distanceKm;
+  final double compatibility;
+  final List<String> interestsOverlap;
+  final String? occupation;
+
+  MatchCandidate({
+    required this.userId,
+    required this.displayName,
+    this.photoUrl,
+    this.photoUrls = const [],
+    required this.age,
+    this.bio,
+    this.city,
+    this.distanceKm,
+    this.compatibility = 0.0,
+    this.interestsOverlap = const [],
+    this.occupation,
+  });
+
+  factory MatchCandidate.fromJson(Map<String, dynamic> json) {
+    final photos = <String>[];
+    if (json['photoUrls'] is List) {
+      photos.addAll((json['photoUrls'] as List).map((e) => e.toString()));
+    }
+    final primaryPhoto =
+        json['primaryPhotoUrl'] ?? json['photoUrl'] ?? (photos.isNotEmpty ? photos.first : null);
+
+    return MatchCandidate(
+      userId: (json['userId'] ?? json['id'] ?? '').toString(),
+      displayName: json['displayName'] ?? json['name'] ?? json['firstName'] ?? 'Unknown',
+      photoUrl: primaryPhoto?.toString(),
+      photoUrls: photos,
+      age: _resolveAge(json),
+      bio: json['bio'],
+      city: json['city'],
+      distanceKm: json['distanceKm'] != null ? (json['distanceKm'] as num).toDouble() : null,
+      compatibility: json['compatibility'] != null
+          ? (json['compatibility'] as num).toDouble()
+          : (json['compatibilityScore'] != null
+              ? (json['compatibilityScore'] as num).toDouble()
+              : 0.0),
+      interestsOverlap: json['interestsOverlap'] is List
+          ? (json['interestsOverlap'] as List).map((e) => e.toString()).toList()
+          : const [],
+      occupation: json['occupation'],
+    );
+  }
+
+  static int _resolveAge(Map<String, dynamic> json) {
+    if (json['age'] is int) return json['age'] as int;
+    if (json['age'] is num) return (json['age'] as num).toInt();
+    if (json['dateOfBirth'] != null) {
+      final dob = DateTime.tryParse(json['dateOfBirth'].toString());
+      if (dob != null) {
+        final now = DateTime.now();
+        var age = now.year - dob.year;
+        if (now.month < dob.month || (now.month == dob.month && now.day < dob.day)) {
+          age--;
+        }
+        return age;
+      }
+    }
+    return 0;
+  }
+}
+
+/// Alias for UserProfile used in the API facade layer
+typedef MemberProfile = UserProfile;
+
+/// Summary of a match used in the matches list
+class MatchSummary {
+  final String matchId;
+  final String matchedUserId;
+  final String displayName;
+  final String? photoUrl;
+  final DateTime matchedAt;
+  final String? lastMessage;
+
+  MatchSummary({
+    required this.matchId,
+    required this.matchedUserId,
+    required this.displayName,
+    this.photoUrl,
+    required this.matchedAt,
+    this.lastMessage,
+  });
+
+  factory MatchSummary.fromJson(Map<String, dynamic> json) {
+    return MatchSummary(
+      matchId: (json['matchId'] ?? json['id'] ?? '').toString(),
+      matchedUserId: (json['matchedUserId'] ?? json['userId'] ?? json['otherUserId'] ?? '').toString(),
+      displayName: json['displayName'] ?? json['name'] ?? 'Unknown',
+      photoUrl: json['photoUrl'] ?? json['primaryPhotoUrl'],
+      matchedAt: DateTime.tryParse(json['matchedAt']?.toString() ?? '') ?? DateTime.now(),
+      lastMessage: json['lastMessage'],
+    );
+  }
+}

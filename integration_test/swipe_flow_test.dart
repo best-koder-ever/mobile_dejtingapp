@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:dejtingapp/main.dart' as app;
-import 'package:dejtingapp/swipe_screen.dart';
+// SwipeScreen removed — discovery is now in screens/home_screen.dart
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -20,7 +20,7 @@ void main() {
 
       // Navigate to swipe screen (assuming it's in a tab or accessible)
       // This may need adjustment based on actual app navigation structure
-      final swipeFinder = find.byType(SwipeScreen);
+      // SwipeScreen merged into HomeScreen discovery tab
       
       // If SwipeScreen is not immediately visible, navigate to it
       // For example, if it's in a bottom navigation tab:
