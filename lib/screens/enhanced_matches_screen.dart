@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import '../models.dart';
-import '../services/messaging_service_simple.dart';
+import '../services/messaging_service.dart';
+import '../api_services.dart';
 import '../services/api_service.dart' show AppState;
 import 'enhanced_chat_screen.dart';
 
@@ -174,62 +175,35 @@ class _EnhancedMatchesScreenState extends State<EnhancedMatchesScreen>
   }
 
   Future<void> _loadMatches() async {
-    final appState = AppState();
-    await appState.initialize();
-    final currentUserId = appState.userId ?? 'current_user';
+    try {
+      final summaries = await matchmakingApi.getMatches();
+      final appState = AppState();
+      await appState.initialize();
+      final currentUserId = appState.userId ?? '';
 
-    // Placeholder mock data until backend integration
-    await Future.delayed(const Duration(milliseconds: 500));
-
-    setState(() {
-      _matches = [
-        Match(
-          id: '1',
-          userId1: currentUserId,
-          userId2: '1',
-          matchedAt: DateTime.now().subtract(const Duration(hours: 2)),
-          otherUserProfile: UserProfile(
-            userId: '1',
-            firstName: 'Emma',
-            lastName: 'Johnson',
-            dateOfBirth: DateTime(1999, 5, 15),
-            bio: 'Love hiking and photography 📸',
-            photoUrls: ['https://picsum.photos/400/600?random=1'],
-            interests: ['Photography', 'Hiking'],
-          ),
-        ),
-        Match(
-          id: '2',
-          userId1: currentUserId,
-          userId2: '2',
-          matchedAt: DateTime.now().subtract(const Duration(hours: 5)),
-          otherUserProfile: UserProfile(
-            userId: '2',
-            firstName: 'Sofia',
-            lastName: 'Garcia',
-            dateOfBirth: DateTime(1997, 3, 22),
-            bio: 'Coffee enthusiast ☕ & book lover 📚',
-            photoUrls: ['https://picsum.photos/400/600?random=2'],
-            interests: ['Reading', 'Coffee', 'Travel'],
-          ),
-        ),
-        Match(
-          id: '3',
-          userId1: currentUserId,
-          userId2: '3',
-          matchedAt: DateTime.now().subtract(const Duration(days: 1)),
-          otherUserProfile: UserProfile(
-            userId: '3',
-            firstName: 'Lisa',
-            lastName: 'Chen',
-            dateOfBirth: DateTime(1995, 8, 10),
-            bio: 'Yoga instructor 🧘‍♀️ Nature lover 🌿',
-            photoUrls: ['https://picsum.photos/400/600?random=3'],
-            interests: ['Yoga', 'Nature', 'Meditation'],
-          ),
-        ),
-      ];
-    });
+      setState(() {
+        _matches = summaries
+            .map((s) => Match(
+                  id: s.matchId,
+                  userId1: currentUserId,
+                  userId2: s.matchedUserId,
+                  matchedAt: s.matchedAt,
+                  otherUserProfile: UserProfile(
+                    userId: s.matchedUserId,
+                    firstName: s.displayName,
+                    lastName: '',
+                    dateOfBirth: DateTime(2000, 1, 1),
+                    photoUrls:
+                        s.photoUrl != null ? [s.photoUrl!] : const [],
+                  ),
+                ))
+            .toList();
+      });
+    } catch (e) {
+      if (mounted) {
+        debugPrint('Error loading matches: \$e');
+      }
+    }
   }
 
   Future<void> _loadConversations() async {

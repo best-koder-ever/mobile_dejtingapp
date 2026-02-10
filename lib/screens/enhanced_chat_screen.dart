@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import '../models.dart';
-import '../services/messaging_service_simple.dart';
+import '../services/messaging_service.dart';
 
 class EnhancedChatScreen extends StatefulWidget {
   final Match match;
@@ -145,13 +145,13 @@ class _EnhancedChatScreenState extends State<EnhancedChatScreen>
     });
 
     try {
-      final success = await _messagingService.sendMessage(
+      final result = await _messagingService.sendMessage(
         otherUserId,
         content,
         type: MessageType.text,
       );
 
-      if (success) {
+      if (result != null) {
         _messageController.clear();
         _scrollToBottom();
       } else {

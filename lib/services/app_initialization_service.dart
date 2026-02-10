@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../services/api_service.dart';
-import '../services/messaging_service_simple.dart';
+import '../services/messaging_service.dart';
 
 class AppInitializationService {
   static final AppInitializationService _instance =
