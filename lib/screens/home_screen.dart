@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../api_services.dart';
 import '../models.dart';
+import '../services/swipe_cache_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -20,6 +21,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   // State
   List<MatchCandidate> _candidates = [];
   int _currentIndex = 0;
+  final SwipeCacheService _swipeCache = SwipeCacheService();
+  int _pendingSwipeCount = 0;
   bool _isLoading = true;
   bool _isSwiping = false;
   String? _errorMessage;
@@ -48,11 +51,37 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _fadeAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
       CurvedAnimation(parent: _swipeController, curve: Curves.easeOut),
     );
+    _initSwipeCache();
     _loadCandidates();
+  }
+
+  Future<void> _initSwipeCache() async {
+    await _swipeCache.init();
+    _swipeCache.onPendingSwipesChanged = () {
+      if (mounted) {
+        setState(() => _pendingSwipeCount = _swipeCache.pendingSwipeCount);
+      }
+    };
+    _swipeCache.onSwipeDrained = (targetUserId, isMatch, matchId) {
+      if (isMatch && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('🎉 New match discovered from queued swipe!'),
+            backgroundColor: Colors.purple,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    };
+    if (mounted) {
+      setState(() => _pendingSwipeCount = _swipeCache.pendingSwipeCount);
+    }
   }
 
   @override
   void dispose() {
+    _swipeCache.dispose();
     _swipeController.dispose();
     super.dispose();
   }
@@ -67,6 +96,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     try {
       final candidates = await matchmakingApi.getCandidates();
+      // Cache for offline use
+      _swipeCache.cacheCandidates(candidates);
       setState(() {
         _candidates = candidates;
         _currentIndex = 0;
@@ -74,10 +105,22 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       });
     } catch (e) {
       debugPrint('Failed to load candidates: $e');
-      setState(() {
-        _isLoading = false;
-        _errorMessage = 'Could not load profiles. Check your connection.';
-      });
+      // Try cached candidates as fallback
+      final cached = _swipeCache.getCachedCandidates();
+      if (cached.isNotEmpty) {
+        debugPrint('Using ${cached.length} cached candidates');
+        setState(() {
+          _candidates = cached;
+          _currentIndex = 0;
+          _isLoading = false;
+          _errorMessage = null;
+        });
+      } else {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'Could not load profiles. Check your connection.';
+        });
+      }
     }
   }
 
@@ -87,6 +130,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       try {
         final more = await matchmakingApi.getCandidates(page: 2);
         if (more.isNotEmpty && mounted) {
+          _swipeCache.cacheCandidates(more);
           setState(() => _candidates.addAll(more));
         }
       } catch (_) {
@@ -115,18 +159,25 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     await _swipeController.forward();
 
-    // Call backend
-    final response = await matchmakingApi.swipe(
+    // Send via cache service (sends immediately or queues for offline)
+    final cacheResult = await _swipeCache.recordSwipe(
       targetUserId: candidate.userId,
       isLike: isLike,
     );
 
-    // Check for match
-    if (response != null && mounted) {
-      final swipeResult = SwipeResponse.fromJson(response);
-      if (swipeResult.isMatch) {
-        _showMatchCelebration(candidate, swipeResult);
-      }
+    // Check for match (only if sent immediately)
+    if (cacheResult.sentImmediately && cacheResult.isMatch && mounted) {
+      final swipeResult = SwipeResponse(
+        isMatch: true,
+        matchId: cacheResult.matchId,
+        message: 'It\'s a match!',
+      );
+      _showMatchCelebration(candidate, swipeResult);
+    }
+
+    // If queued, show subtle indicator
+    if (cacheResult.queued && mounted) {
+      debugPrint('Swipe queued for ${candidate.displayName}');
     }
 
     // Advance to next card
@@ -189,7 +240,41 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: _buildBody(),
+        child: Stack(
+          children: [
+            _buildBody(),
+            // Pending swipe queue indicator
+            if (_pendingSwipeCount > 0)
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade700,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.cloud_upload,
+                          color: Colors.white, size: 14),
+                      const SizedBox(width: 4),
+                      Text(
+                        '$_pendingSwipeCount pending',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
