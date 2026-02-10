@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dejtingapp/theme/app_theme.dart';
 import 'package:flutter/foundation.dart';
 import 'main_app.dart';
 import 'screens/auth_screens.dart';
@@ -26,22 +27,25 @@ Future<void> main() async {
   EnvSwitcher.useDevelopment();
 
   if (kDebugMode) {
-    print('🚀 Starting DatingApp in ${EnvironmentConfig.settings.name} environment');
-    print('Gateway: ${EnvironmentConfig.settings.gatewayUrl}');
-    print('Keycloak: ${EnvironmentConfig.settings.keycloakUrl}');
-    print('DevMode: ${DevMode.enabled ? "ON" : "OFF"}');
+    debugPrint('🚀 Starting DatingApp in ${EnvironmentConfig.settings.name} environment');
+    debugPrint('Gateway: ${EnvironmentConfig.settings.gatewayUrl}');
+    debugPrint('Keycloak: ${EnvironmentConfig.settings.keycloakUrl}');
+    debugPrint('DevMode: ${DevMode.enabled ? "ON" : "OFF"}');
   }
 
   final appState = AppState();
   await appState.initialize();
 
-  // In DevMode, skip auto-login so we can test onboarding flow
-  if (!DevMode.enabled) {
-    if (!appState.hasValidAuthSession(gracePeriod: const Duration(seconds: 5))) {
-      await appState.logout();
-      await DevAutoLogin.ensureDemoSession();
-      await appState.initialize(forceRefresh: true);
-    }
+  // Always auto-login with demo user if no valid session
+  if (!appState.hasValidAuthSession(gracePeriod: const Duration(seconds: 5))) {
+    await appState.logout();
+    await DevAutoLogin.ensureDemoSession();
+    await appState.initialize(forceRefresh: true);
+  }
+
+  if (kDebugMode) {
+    debugPrint('👤 Logged in as: ${appState.userId ?? "NONE"}');
+    debugPrint('🔑 Token: ${appState.authToken != null ? "YES" : "NO"}');
   }
 
   runApp(const DatingApp());
@@ -55,33 +59,16 @@ class DatingApp extends StatelessWidget {
     return MaterialApp(
       title: 'DatingApp',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primarySwatch: Colors.pink,
-        useMaterial3: true,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.pink,
-          foregroundColor: Colors.white,
-          elevation: 0,
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.pink,
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(25),
-            ),
-          ),
-        ),
-      ),
+      theme: AppTheme.lightTheme,
       initialRoute: _getInitialRoute(),
       routes: {
         // Auth routes
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
-
+        
         // Welcome / entry point
         '/welcome': (context) => const WelcomeScreen(),
-
+        
         // Onboarding wizard flow
         '/onboarding/phone': (context) => const PhoneEntryScreen(),
         '/onboarding/community-guidelines': (context) => const CommunityGuidelinesScreen(),
@@ -94,7 +81,7 @@ class DatingApp extends StatelessWidget {
         '/onboarding/lifestyle': (context) => const LifestyleScreen(),
         '/onboarding/interests': (context) => const InterestsScreen(),
         '/onboarding/about-me': (context) => const AboutMeScreen(),
-
+        
         // Main app
         '/home': (context) => const MainApp(),
         '/profile': (context) => const TinderLikeProfileScreen(isFirstTime: false),
@@ -119,14 +106,14 @@ class DatingApp extends StatelessWidget {
   }
 
   String _getInitialRoute() {
-    // In DevMode, always start at welcome for onboarding testing
-    if (DevMode.enabled) {
-      return '/welcome';
-    }
-
     final appState = AppState();
-    return appState.hasValidAuthSession(gracePeriod: const Duration(minutes: 1))
-        ? '/home'
-        : '/login';
+    
+    // If we have a valid session, go straight to home (Discover)
+    if (appState.hasValidAuthSession(gracePeriod: const Duration(minutes: 1))) {
+      return '/home';
+    }
+    
+    // Otherwise fall back to welcome/login
+    return DevMode.enabled ? '/welcome' : '/login';
   }
 }

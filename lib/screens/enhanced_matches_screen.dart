@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dejtingapp/theme/app_theme.dart';
 import 'dart:async';
 import '../models.dart';
 import '../services/messaging_service.dart';
@@ -232,20 +233,20 @@ class _EnhancedMatchesScreenState extends State<EnhancedMatchesScreen>
             _buildConnectionStatus(),
           ],
         ),
-        backgroundColor: Colors.pink,
+        backgroundColor: AppTheme.primaryColor,
         foregroundColor: Colors.white,
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.white,
           labelColor: Colors.white,
-          unselectedLabelColor: Colors.pink[100],
+          unselectedLabelColor: AppTheme.primaryLight,
           tabs: [
             Tab(
               text: 'New Matches',
               icon: _matches.isNotEmpty
                   ? Badge(
                       backgroundColor: Colors.white,
-                      textColor: Colors.pink,
+                      textColor: AppTheme.primaryColor,
                       label: Text(_matches.length.toString()),
                       child: const Icon(Icons.favorite),
                     )
@@ -256,7 +257,7 @@ class _EnhancedMatchesScreenState extends State<EnhancedMatchesScreen>
               icon: _conversations.where((c) => c.unreadCount > 0).isNotEmpty
                   ? Badge(
                       backgroundColor: Colors.white,
-                      textColor: Colors.pink,
+                      textColor: AppTheme.primaryColor,
                       label: Text(_conversations
                           .map((c) => c.unreadCount)
                           .fold(0, (a, b) => a + b)
@@ -270,7 +271,7 @@ class _EnhancedMatchesScreenState extends State<EnhancedMatchesScreen>
       ),
       body: _isLoading
           ? const Center(
-              child: CircularProgressIndicator(color: Colors.pink),
+              child: CircularProgressIndicator(color: AppTheme.primaryColor),
             )
           : TabBarView(
               controller: _tabController,
@@ -384,7 +385,7 @@ class _EnhancedMatchesScreenState extends State<EnhancedMatchesScreen>
                                   width: 24,
                                   height: 24,
                                   decoration: BoxDecoration(
-                                    color: Colors.pink,
+                                    color: AppTheme.primaryColor,
                                     shape: BoxShape.circle,
                                     border: Border.all(
                                         color: Colors.white, width: 2),
@@ -475,7 +476,7 @@ class _EnhancedMatchesScreenState extends State<EnhancedMatchesScreen>
               width: 8,
               height: 8,
               decoration: const BoxDecoration(
-                color: Colors.pink,
+                color: AppTheme.primaryColor,
                 shape: BoxShape.circle,
               ),
             ),
@@ -557,7 +558,7 @@ class _EnhancedMatchesScreenState extends State<EnhancedMatchesScreen>
                   width: 16,
                   height: 16,
                   decoration: const BoxDecoration(
-                    color: Colors.pink,
+                    color: AppTheme.primaryColor,
                     shape: BoxShape.circle,
                   ),
                   child: Center(
@@ -595,7 +596,7 @@ class _EnhancedMatchesScreenState extends State<EnhancedMatchesScreen>
             Text(
               _formatTime(conversation.lastMessage.timestamp),
               style: TextStyle(
-                color: hasUnread ? Colors.pink : Colors.grey[600],
+                color: hasUnread ? AppTheme.primaryColor : AppTheme.textSecondary,
                 fontSize: 12,
                 fontWeight: hasUnread ? FontWeight.bold : FontWeight.normal,
               ),
@@ -606,7 +607,7 @@ class _EnhancedMatchesScreenState extends State<EnhancedMatchesScreen>
                 width: 8,
                 height: 8,
                 decoration: const BoxDecoration(
-                  color: Colors.pink,
+                  color: AppTheme.primaryColor,
                   shape: BoxShape.circle,
                 ),
               ),

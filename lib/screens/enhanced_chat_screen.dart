@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dejtingapp/theme/app_theme.dart';
 import 'dart:async';
 import '../models.dart';
 import '../services/messaging_service.dart';
@@ -211,7 +212,7 @@ class _EnhancedChatScreenState extends State<EnhancedChatScreen>
                     maxWidth: MediaQuery.of(context).size.width * 0.75,
                   ),
                   decoration: BoxDecoration(
-                    color: isMe ? Colors.pink : Colors.grey[200],
+                    color: isMe ? AppTheme.primaryColor : const Color(0xFFF3F4F6),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -316,7 +317,7 @@ class _EnhancedChatScreenState extends State<EnhancedChatScreen>
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.pink,
+        backgroundColor: AppTheme.primaryColor,
         foregroundColor: Colors.white,
         title: Row(
           children: [
@@ -397,7 +398,7 @@ class _EnhancedChatScreenState extends State<EnhancedChatScreen>
           Expanded(
             child: _isLoading
                 ? const Center(
-                    child: CircularProgressIndicator(color: Colors.pink),
+                    child: CircularProgressIndicator(color: AppTheme.primaryColor),
                   )
                 : _messages.isEmpty
                     ? Center(
@@ -483,7 +484,7 @@ class _EnhancedChatScreenState extends State<EnhancedChatScreen>
                   const SizedBox(width: 12),
                   FloatingActionButton.small(
                     onPressed: _isSending ? null : _sendMessage,
-                    backgroundColor: _isSending ? Colors.grey : Colors.pink,
+                    backgroundColor: _isSending ? Colors.grey : AppTheme.primaryColor,
                     child: _isSending
                         ? const SizedBox(
                             width: 16,

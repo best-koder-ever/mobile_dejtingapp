@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:dejtingapp/theme/app_theme.dart';
 import 'package:image_picker/image_picker.dart';
 
 import 'api_services.dart';
@@ -755,7 +756,7 @@ class _TinderLikeProfileScreenState extends State<TinderLikeProfileScreen> {
         title: Text(
           widget.isFirstTime ? 'Create Your Profile' : 'Edit Profile',
         ),
-        backgroundColor: Colors.pink[400],
+        backgroundColor: AppTheme.primaryColor,
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
@@ -813,19 +814,19 @@ class _TinderLikeProfileScreenState extends State<TinderLikeProfileScreen> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Colors.pink[50]!, Colors.pink[100]!],
+          colors: [AppTheme.primarySubtle, AppTheme.primaryLight],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.pink[200]!),
+        border: Border.all(color: AppTheme.primaryLight),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.stars, color: Colors.pink[400]),
+              Icon(Icons.stars, color: AppTheme.primaryColor),
               const SizedBox(width: 8),
               Text(
                 'Profile Strength: $_profileCompletionPercentage%',
@@ -852,7 +853,7 @@ class _TinderLikeProfileScreenState extends State<TinderLikeProfileScreen> {
             matchBonus,
             style: TextStyle(
               fontSize: 12,
-              color: Colors.pink[600],
+              color: AppTheme.primaryDark,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -867,7 +868,7 @@ class _TinderLikeProfileScreenState extends State<TinderLikeProfileScreen> {
       children: [
         Row(
           children: [
-            Icon(Icons.photo_camera, color: Colors.pink[400]),
+            Icon(Icons.photo_camera, color: AppTheme.primaryColor),
             const SizedBox(width: 8),
             const Text(
               'Photos',
@@ -1136,8 +1137,8 @@ class _TinderLikeProfileScreenState extends State<TinderLikeProfileScreen> {
               label: Text(interest),
               selected: isSelected,
               onSelected: (selected) => _toggleInterest(interest),
-              selectedColor: Colors.pink[200],
-              checkmarkColor: Colors.pink[800],
+              selectedColor: AppTheme.primarySubtle,
+              checkmarkColor: AppTheme.primaryDark,
             );
           }).toList(),
         ),
@@ -1160,8 +1161,8 @@ class _TinderLikeProfileScreenState extends State<TinderLikeProfileScreen> {
               label: Text(language),
               selected: isSelected,
               onSelected: (selected) => _toggleLanguage(language),
-              selectedColor: Colors.blue[200],
-              checkmarkColor: Colors.blue[800],
+              selectedColor: AppTheme.infoColor.withValues(alpha: 0.2),
+              checkmarkColor: AppTheme.infoColor,
             );
           }).toList(),
         ),
@@ -1180,7 +1181,7 @@ class _TinderLikeProfileScreenState extends State<TinderLikeProfileScreen> {
       children: [
         Row(
           children: [
-            Icon(icon, color: Colors.pink[400]),
+            Icon(icon, color: AppTheme.primaryColor),
             const SizedBox(width: 8),
             Text(
               title,
@@ -1247,9 +1248,9 @@ class _TinderLikeProfileScreenState extends State<TinderLikeProfileScreen> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.red[50],
+        color: AppTheme.errorColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.red[200]!),
+        border: Border.all(color: AppTheme.errorColor.withValues(alpha: 0.3)),
       ),
       child: Text(_errorMessage!, style: const TextStyle(color: Colors.red)),
     );
@@ -1262,7 +1263,7 @@ class _TinderLikeProfileScreenState extends State<TinderLikeProfileScreen> {
       child: ElevatedButton(
         onPressed: _isLoading ? null : _saveProfile,
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.pink[400],
+          backgroundColor: AppTheme.primaryColor,
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -1293,7 +1294,7 @@ class _TinderLikeProfileScreenState extends State<TinderLikeProfileScreen> {
           _loadPhotosFromPhotoService();
         },
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.purple[400],
+          backgroundColor: AppTheme.secondaryColor,
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -1361,7 +1362,7 @@ class _TinderLikeProfileScreenState extends State<TinderLikeProfileScreen> {
                 .map(
                   (interest) => Chip(
                     label: Text(interest),
-                    backgroundColor: Colors.pink[100],
+                    backgroundColor: AppTheme.primarySubtle,
                   ),
                 )
                 .toList(),

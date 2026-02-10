@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dejtingapp/theme/app_theme.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -20,7 +21,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Settings'),
-        backgroundColor: Colors.pink,
+        backgroundColor: AppTheme.primaryColor,
         foregroundColor: Colors.white,
       ),
       body: ListView(
@@ -28,7 +29,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           // Account Section
           _buildSectionHeader('Account'),
           ListTile(
-            leading: const Icon(Icons.person, color: Colors.pink),
+            leading: const Icon(Icons.person, color: AppTheme.primaryColor),
             title: const Text('Edit Profile'),
             subtitle: const Text('Update your photos and bio'),
             trailing: const Icon(Icons.arrow_forward_ios),
@@ -37,7 +38,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             },
           ),
           ListTile(
-            leading: const Icon(Icons.verified_user, color: Colors.pink),
+            leading: const Icon(Icons.verified_user, color: AppTheme.primaryColor),
             title: const Text('Verify Your Account'),
             subtitle: const Text('Get a blue checkmark'),
             trailing: const Icon(Icons.arrow_forward_ios),
@@ -46,7 +47,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             },
           ),
           ListTile(
-            leading: const Icon(Icons.security, color: Colors.pink),
+            leading: const Icon(Icons.security, color: AppTheme.primaryColor),
             title: const Text('Privacy & Security'),
             subtitle: const Text('Control your privacy settings'),
             trailing: const Icon(Icons.arrow_forward_ios),
@@ -60,7 +61,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           // Discovery Settings
           _buildSectionHeader('Discovery Settings'),
           ListTile(
-            leading: const Icon(Icons.location_on, color: Colors.pink),
+            leading: const Icon(Icons.location_on, color: AppTheme.primaryColor),
             title: const Text('Location'),
             subtitle: const Text('Update your location'),
             trailing: const Icon(Icons.arrow_forward_ios),
@@ -83,7 +84,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   min: 1,
                   max: 100,
                   divisions: 99,
-                  activeColor: Colors.pink,
+                  activeColor: AppTheme.primaryColor,
                   onChanged: (value) {
                     setState(() {
                       _maxDistance = value;
@@ -108,7 +109,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   min: 18,
                   max: 80,
                   divisions: 62,
-                  activeColor: Colors.pink,
+                  activeColor: AppTheme.primaryColor,
                   onChanged: (values) {
                     setState(() {
                       _ageRange = values;
@@ -120,11 +121,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
 
           SwitchListTile(
-            secondary: const Icon(Icons.visibility, color: Colors.pink),
+            secondary: const Icon(Icons.visibility, color: AppTheme.primaryColor),
             title: const Text('Show me on Tinder'),
             subtitle: const Text('Turn off to pause your account'),
             value: _showMeOnTinder,
-            activeColor: Colors.pink,
+            activeColor: AppTheme.primaryColor,
             onChanged: (value) {
               setState(() {
                 _showMeOnTinder = value;
@@ -137,11 +138,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           // Notifications
           _buildSectionHeader('Notifications'),
           SwitchListTile(
-            secondary: const Icon(Icons.notifications, color: Colors.pink),
+            secondary: const Icon(Icons.notifications, color: AppTheme.primaryColor),
             title: const Text('Push Notifications'),
             subtitle: const Text('New matches and messages'),
             value: _pushNotifications,
-            activeColor: Colors.pink,
+            activeColor: AppTheme.primaryColor,
             onChanged: (value) {
               setState(() {
                 _pushNotifications = value;
@@ -154,11 +155,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           // Profile Display
           _buildSectionHeader('Profile Display'),
           SwitchListTile(
-            secondary: const Icon(Icons.cake, color: Colors.pink),
+            secondary: const Icon(Icons.cake, color: AppTheme.primaryColor),
             title: const Text('Show Age'),
             subtitle: const Text('Display your age on your profile'),
             value: _showAgeInProfile,
-            activeColor: Colors.pink,
+            activeColor: AppTheme.primaryColor,
             onChanged: (value) {
               setState(() {
                 _showAgeInProfile = value;
@@ -166,11 +167,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             },
           ),
           SwitchListTile(
-            secondary: const Icon(Icons.location_on, color: Colors.pink),
+            secondary: const Icon(Icons.location_on, color: AppTheme.primaryColor),
             title: const Text('Show Distance'),
             subtitle: const Text('Display distance on your profile'),
             value: _showDistanceInProfile,
-            activeColor: Colors.pink,
+            activeColor: AppTheme.primaryColor,
             onChanged: (value) {
               setState(() {
                 _showDistanceInProfile = value;
@@ -183,7 +184,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           // Support & About
           _buildSectionHeader('Support & About'),
           ListTile(
-            leading: const Icon(Icons.help, color: Colors.pink),
+            leading: const Icon(Icons.help, color: AppTheme.primaryColor),
             title: const Text('Help & Support'),
             trailing: const Icon(Icons.arrow_forward_ios),
             onTap: () {
@@ -191,7 +192,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             },
           ),
           ListTile(
-            leading: const Icon(Icons.info, color: Colors.pink),
+            leading: const Icon(Icons.info, color: AppTheme.primaryColor),
             title: const Text('About'),
             trailing: const Icon(Icons.arrow_forward_ios),
             onTap: () {
@@ -199,7 +200,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             },
           ),
           ListTile(
-            leading: const Icon(Icons.star, color: Colors.pink),
+            leading: const Icon(Icons.star, color: AppTheme.primaryColor),
             title: const Text('Rate Us'),
             trailing: const Icon(Icons.arrow_forward_ios),
             onTap: () {
@@ -240,7 +241,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         style: const TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.bold,
-          color: Colors.pink,
+          color: AppTheme.primaryColor,
         ),
       ),
     );

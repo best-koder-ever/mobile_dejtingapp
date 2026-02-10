@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dejtingapp/theme/app_theme.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../config/environment.dart';
@@ -124,7 +125,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 labelText: 'Username or email',
                                 prefixIcon: const Icon(
                                   Icons.person,
-                                  color: Colors.pink,
+                                  color: AppTheme.primaryColor,
                                 ),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
@@ -132,7 +133,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 focusedBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                   borderSide: const BorderSide(
-                                    color: Colors.pink,
+                                    color: AppTheme.primaryColor,
                                   ),
                                 ),
                               ),
@@ -151,14 +152,14 @@ class _LoginScreenState extends State<LoginScreen> {
                                 labelText: 'Password',
                                 prefixIcon: const Icon(
                                   Icons.lock,
-                                  color: Colors.pink,
+                                  color: AppTheme.primaryColor,
                                 ),
                                 suffixIcon: IconButton(
                                   icon: Icon(
                                     _obscurePassword
                                         ? Icons.visibility
                                         : Icons.visibility_off,
-                                    color: Colors.pink,
+                                    color: AppTheme.primaryColor,
                                   ),
                                   onPressed: () {
                                     setState(() {
@@ -172,7 +173,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 focusedBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                   borderSide: const BorderSide(
-                                    color: Colors.pink,
+                                    color: AppTheme.primaryColor,
                                   ),
                                 ),
                               ),
@@ -192,7 +193,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               child: ElevatedButton(
                                 onPressed: _isLoading ? null : _login,
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.pink,
+                                  backgroundColor: AppTheme.primaryColor,
                                   foregroundColor: Colors.white,
                                   padding: const EdgeInsets.symmetric(
                                     vertical: 16,
@@ -314,7 +315,7 @@ class RegisterScreen extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      const Icon(Icons.favorite, size: 72, color: Colors.pink),
+                      const Icon(Icons.favorite, size: 72, color: AppTheme.primaryColor),
                       const SizedBox(height: 16),
                       const Text(
                         'Create your DatingApp account',

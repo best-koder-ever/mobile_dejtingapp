@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:dejtingapp/theme/app_theme.dart';
 
 class PhotoGridCard extends StatelessWidget {
   final String? photoUrl;
@@ -46,7 +47,7 @@ class PhotoGridCard extends StatelessWidget {
             if (isLoading) ...[
               const CircularProgressIndicator(
                 strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.pink),
+                valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
               ),
               const SizedBox(height: 8),
               const Text(
@@ -117,7 +118,7 @@ class PhotoGridCard extends StatelessWidget {
                           : null,
                       strokeWidth: 2,
                       valueColor: const AlwaysStoppedAnimation<Color>(
-                        Colors.pink,
+                        AppTheme.primaryColor,
                       ),
                     ),
                   ),
@@ -156,7 +157,7 @@ class PhotoGridCard extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: Colors.pink[500],
+                color: AppTheme.primaryColor,
                 borderRadius: BorderRadius.circular(6),
                 boxShadow: [
                   BoxShadow(

@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:dejtingapp/theme/app_theme.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:file_picker/file_picker.dart';
@@ -597,7 +598,7 @@ class _PhotoUploadScreenState extends State<PhotoUploadScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Add Photos'),
-        backgroundColor: Colors.pink,
+        backgroundColor: AppTheme.primaryColor,
         foregroundColor: Colors.white,
         elevation: 0,
       ),
@@ -727,7 +728,7 @@ class _PhotoUploadScreenState extends State<PhotoUploadScreen> {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: slot.isPrimary ? Colors.pink : Colors.grey.shade300,
+            color: slot.isPrimary ? AppTheme.primaryColor : Colors.grey.shade300,
             width: slot.isPrimary ? 3 : 1,
           ),
           boxShadow: [
@@ -759,7 +760,7 @@ class _PhotoUploadScreenState extends State<PhotoUploadScreen> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: Colors.pink,
+                      color: AppTheme.primaryColor,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Row(

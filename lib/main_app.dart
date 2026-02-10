@@ -48,7 +48,7 @@ class _MainAppState extends State<MainApp> {
             _currentIndex = index;
           });
         },
-        selectedItemColor: Colors.pink,
+        selectedItemColor: const Color(0xFFFF6B6B),
         unselectedItemColor: Colors.grey,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.explore), label: 'Discover'),
