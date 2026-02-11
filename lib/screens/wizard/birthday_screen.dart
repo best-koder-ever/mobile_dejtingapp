@@ -94,7 +94,7 @@ class _BirthdayScreenState extends State<BirthdayScreen> {
               ClipRRect(
                 borderRadius: BorderRadius.circular(4),
                 child: LinearProgressIndicator(
-                  value: 0.35,
+                  value: 0.31,
                   backgroundColor: Colors.grey[200],
                   valueColor:
                       const AlwaysStoppedAnimation(Color(0xFFFF6B6B)),

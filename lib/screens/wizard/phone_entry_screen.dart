@@ -12,7 +12,7 @@ class PhoneEntryScreen extends StatefulWidget {
 }
 
 class _PhoneEntryScreenState extends State<PhoneEntryScreen> {
-  static const Color coralColor = Color(0xFFFF7F50);
+  static const Color coralColor = Color(0xFFFF6B6B);
 
   final TextEditingController _phoneController = TextEditingController();
   String _selectedCountryCode = '+46';
