@@ -11,6 +11,8 @@ import 'screens/wizard/first_name_screen.dart';
 import 'screens/wizard/birthday_screen.dart';
 import 'screens/wizard/gender_screen.dart';
 import 'screens/wizard/orientation_screen.dart';
+import 'screens/wizard/relationship_goals_screen.dart';
+import 'screens/wizard/match_preferences_screen.dart';
 import 'screens/wizard/photos_screen.dart';
 import 'screens/wizard/sms_code_screen.dart';
 import 'screens/wizard/lifestyle_screen.dart';
@@ -76,6 +78,8 @@ class DatingApp extends StatelessWidget {
         '/onboarding/birthday': (context) => const BirthdayScreen(),
         '/onboarding/gender': (context) => const GenderScreen(),
         '/onboarding/orientation': (context) => const OrientationScreen(),
+        '/onboarding/relationship-goals': (context) => const RelationshipGoalsScreen(),
+        '/onboarding/match-preferences': (context) => const MatchPreferencesScreen(),
         '/onboarding/photos': (context) => const PhotosScreen(),
         '/onboarding/verify-code': (context) => const SmsCodeScreen(),
         '/onboarding/lifestyle': (context) => const LifestyleScreen(),

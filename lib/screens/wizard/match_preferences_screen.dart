@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/dev_mode_banner.dart';
 
 /// Match Preferences Screen (ONB-100)
 /// Who do you want to match with? Select gender preferences.
@@ -28,99 +29,98 @@ class _MatchPreferencesScreenState extends State<MatchPreferencesScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.close, color: Colors.black),
-            onPressed: () =>
-                Navigator.popUntil(context, (route) => route.isFirst),
+            onPressed: () => Navigator.popUntil(context, (route) => route.isFirst),
           ),
         ],
       ),
-      body: Column(
+      body: Stack(
         children: [
-          // Progress bar at 55%
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: 0.55,
-              backgroundColor: Colors.grey[200],
-              valueColor: const AlwaysStoppedAnimation(Color(0xFFFF6B6B)),
-              minHeight: 4,
-            ),
-          ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Show me',
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 40),
-                  // 3 large selection buttons with radio behavior
-                  ..._options.map((option) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: SizedBox(
-                      width: double.infinity,
-                      height: 54,
-                      child: OutlinedButton(
-                        onPressed: () => setState(() => _selected = option),
-                        style: OutlinedButton.styleFrom(
-                          side: BorderSide(
-                            color: _selected == option
+          Column(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: 0.62,
+                  backgroundColor: Colors.grey[200],
+                  valueColor: const AlwaysStoppedAnimation(Color(0xFFFF6B6B)),
+                  minHeight: 4,
+                ),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Show me',
+                        style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 40),
+                      ..._options.map((option) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: SizedBox(
+                          width: double.infinity,
+                          height: 54,
+                          child: OutlinedButton(
+                            onPressed: () => setState(() => _selected = option),
+                            style: OutlinedButton.styleFrom(
+                              side: BorderSide(
+                                color: _selected == option
+                                    ? const Color(0xFFFF6B6B)
+                                    : Colors.grey,
+                                width: 2,
+                              ),
+                              backgroundColor: _selected == option
+                                  ? const Color(0xFFFF6B6B).withAlpha(25)
+                                  : Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(27),
+                              ),
+                            ),
+                            child: Text(
+                              option,
+                              style: TextStyle(
+                                fontSize: 18,
+                                color: _selected == option
+                                    ? const Color(0xFFFF6B6B)
+                                    : Colors.black,
+                              ),
+                            ),
+                          ),
+                        ),
+                      )),
+                      const Spacer(),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 54,
+                        child: ElevatedButton(
+                          onPressed: _selected != null
+                              ? () => Navigator.pushNamed(context, '/onboarding/photos')
+                              : null,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _selected != null
                                 ? const Color(0xFFFF6B6B)
                                 : Colors.grey,
-                            width: 2,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(27),
+                            ),
                           ),
-                          backgroundColor: _selected == option
-                              ? const Color(0xFFFF6B6B).withAlpha(25)
-                              : Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(27),
-                          ),
-                        ),
-                        child: Text(
-                          option,
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: _selected == option
-                                ? const Color(0xFFFF6B6B)
-                                : Colors.black,
+                          child: const Text(
+                            'Next',
+                            style: TextStyle(fontSize: 18, color: Colors.white),
                           ),
                         ),
                       ),
-                    ),
-                  )),
-                  const Spacer(),
-                  // Next button — disabled until selection made
-                  SizedBox(
-                    width: double.infinity,
-                    height: 54,
-                    child: ElevatedButton(
-                      onPressed: _selected != null
-                          ? () {
-                              // Navigate to next onboarding step
-                            }
-                          : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _selected != null
-                            ? const Color(0xFFFF6B6B)
-                            : Colors.grey,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(27),
-                        ),
-                      ),
-                      child: const Text(
-                        'Next',
-                        style: TextStyle(fontSize: 18, color: Colors.white),
-                      ),
-                    ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
+            ],
+          ),
+          DevModeSkipButton(
+            onSkip: () => Navigator.pushNamed(context, '/onboarding/photos'),
+            label: 'Skip Prefs',
           ),
         ],
       ),

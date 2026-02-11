@@ -96,7 +96,7 @@ class _GenderScreenState extends State<GenderScreen> {
               ClipRRect(
                 borderRadius: BorderRadius.circular(4),
                 child: LinearProgressIndicator(
-                  value: 0.45,
+                  value: 0.38,
                   backgroundColor: Colors.grey[200],
                   valueColor: const AlwaysStoppedAnimation(Color(0xFFFF6B6B)),
                   minHeight: 4,
@@ -216,7 +216,7 @@ class _GenderScreenState extends State<GenderScreen> {
                         child: ElevatedButton(
                           onPressed: _selected != null
                               ? () => Navigator.pushNamed(
-                                  context, '/onboarding/orientation')
+                                  context, '/onboarding/relationship-goals')
                               : null,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: _selected != null
@@ -240,7 +240,7 @@ class _GenderScreenState extends State<GenderScreen> {
           ),
           DevModeSkipButton(
             onSkip: () =>
-                Navigator.pushNamed(context, '/onboarding/orientation'),
+                Navigator.pushNamed(context, '/onboarding/relationship-goals'),
             label: 'Skip Gender',
           ),
         ],

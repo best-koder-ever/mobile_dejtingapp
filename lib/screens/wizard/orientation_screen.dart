@@ -95,8 +95,8 @@ class _OrientationScreenState extends State<OrientationScreen> {
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(4),
                     child: LinearProgressIndicator(
-                      value: 0.55,
-                      backgroundColor: Colors.grey[800],
+                      value: 0.54,
+                      backgroundColor: Colors.white.withAlpha(51),
                       valueColor: const AlwaysStoppedAnimation<Color>(
                           Color(0xFFFF6B6B)),
                       minHeight: 4,
@@ -236,7 +236,7 @@ class _OrientationScreenState extends State<OrientationScreen> {
                     child: ElevatedButton(
                       onPressed: _isValid
                           ? () => Navigator.pushNamed(
-                              context, '/onboarding/photos')
+                              context, '/onboarding/match-preferences')
                           : null,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFFF6B6B),
@@ -257,7 +257,7 @@ class _OrientationScreenState extends State<OrientationScreen> {
           ),
           DevModeSkipButton(
             onSkip: () =>
-                Navigator.pushNamed(context, '/onboarding/photos'),
+                Navigator.pushNamed(context, '/onboarding/match-preferences'),
             label: 'Skip Orientation',
           ),
         ],

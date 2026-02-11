@@ -36,7 +36,7 @@ class CommunityGuidelinesScreen extends StatelessWidget {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(4),
                     child: LinearProgressIndicator(
-                      value: 0.14,
+                      value: 0.15,
                       backgroundColor: Colors.grey[200],
                       valueColor: const AlwaysStoppedAnimation(Color(0xFFFF6B6B)),
                       minHeight: 4,

@@ -63,7 +63,7 @@ class _PhotosScreenState extends State<PhotosScreen> {
               ClipRRect(
                 borderRadius: BorderRadius.circular(4),
                 child: LinearProgressIndicator(
-                  value: 0.85,
+                  value: 0.69,
                   backgroundColor: Colors.grey[200],
                   valueColor: const AlwaysStoppedAnimation(Color(0xFFFF6B6B)),
                   minHeight: 4,
@@ -209,7 +209,7 @@ class _PhotosScreenState extends State<PhotosScreen> {
             ],
           ),
           DevModeSkipButton(
-            onSkip: () => Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false),
+            onSkip: () => Navigator.pushNamed(context, '/onboarding/lifestyle'),
             label: 'Skip Photos',
           ),
         ],

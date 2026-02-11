@@ -40,7 +40,7 @@ class _FirstNameScreenState extends State<FirstNameScreen> {
               ClipRRect(
                 borderRadius: BorderRadius.circular(4),
                 child: LinearProgressIndicator(
-                  value: 0.28,
+                  value: 0.23,
                   backgroundColor: Colors.grey[200],
                   valueColor: const AlwaysStoppedAnimation(Color(0xFFFF6B6B)),
                   minHeight: 4,

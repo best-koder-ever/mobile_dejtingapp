@@ -122,7 +122,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           SwitchListTile(
             secondary: const Icon(Icons.visibility, color: AppTheme.primaryColor),
-            title: const Text('Show me on Tinder'),
+            title: const Text('Show me on DejTing'),
             subtitle: const Text('Turn off to pause your account'),
             value: _showMeOnTinder,
             activeColor: AppTheme.primaryColor,

@@ -159,7 +159,7 @@ class _LifestyleScreenState extends State<LifestyleScreen> {
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(4),
                     child: LinearProgressIndicator(
-                      value: 0.72,
+                      value: 0.77,
                       backgroundColor: Colors.white.withAlpha(51),
                       valueColor: const AlwaysStoppedAnimation(_coral),
                       minHeight: 4,

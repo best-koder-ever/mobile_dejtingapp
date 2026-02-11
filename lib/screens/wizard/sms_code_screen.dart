@@ -160,7 +160,7 @@ class _SmsCodeScreenState extends State<SmsCodeScreen> {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(4),
                     child: LinearProgressIndicator(
-                      value: 0.05,
+                      value: 0.08,
                       backgroundColor: Colors.grey[200],
                       valueColor: const AlwaysStoppedAnimation(_coral),
                       minHeight: 4,
