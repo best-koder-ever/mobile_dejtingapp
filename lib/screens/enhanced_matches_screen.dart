@@ -233,20 +233,20 @@ class _EnhancedMatchesScreenState extends State<EnhancedMatchesScreen>
             _buildConnectionStatus(),
           ],
         ),
-        backgroundColor: AppTheme.primaryColor,
-        foregroundColor: Colors.white,
+        // Uses theme default AppBar (dark surface)
+        // Uses theme default foreground
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: Colors.white,
-          labelColor: Colors.white,
-          unselectedLabelColor: AppTheme.primaryLight,
+          // Uses theme TabBar indicator
+          // Uses theme TabBar labelColor
+          // Uses theme TabBar unselected
           tabs: [
             Tab(
               text: 'New Matches',
               icon: _matches.isNotEmpty
                   ? Badge(
-                      backgroundColor: Colors.white,
-                      textColor: AppTheme.primaryColor,
+                      backgroundColor: AppTheme.surfaceElevated,
+                      textColor: AppTheme.textPrimary,
                       label: Text(_matches.length.toString()),
                       child: const Icon(Icons.favorite),
                     )
@@ -256,8 +256,8 @@ class _EnhancedMatchesScreenState extends State<EnhancedMatchesScreen>
               text: 'Messages',
               icon: _conversations.where((c) => c.unreadCount > 0).isNotEmpty
                   ? Badge(
-                      backgroundColor: Colors.white,
-                      textColor: AppTheme.primaryColor,
+                      backgroundColor: AppTheme.surfaceElevated,
+                      textColor: AppTheme.textPrimary,
                       label: Text(_conversations
                           .map((c) => c.unreadCount)
                           .fold(0, (a, b) => a + b)
@@ -407,7 +407,7 @@ class _EnhancedMatchesScreenState extends State<EnhancedMatchesScreen>
                           Text(
                             _formatTime(match.matchedAt),
                             style: TextStyle(
-                              color: Colors.grey[600],
+                              color: AppTheme.textSecondary,
                               fontSize: 12,
                             ),
                           ),
@@ -467,7 +467,7 @@ class _EnhancedMatchesScreenState extends State<EnhancedMatchesScreen>
             Text(
               _formatTime(match.matchedAt),
               style: TextStyle(
-                color: Colors.grey[600],
+                color: AppTheme.textSecondary,
                 fontSize: 12,
               ),
             ),

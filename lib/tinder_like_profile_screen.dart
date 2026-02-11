@@ -756,8 +756,7 @@ class _TinderLikeProfileScreenState extends State<TinderLikeProfileScreen> {
         title: Text(
           widget.isFirstTime ? 'Create Your Profile' : 'Edit Profile',
         ),
-        backgroundColor: AppTheme.primaryColor,
-        foregroundColor: Colors.white,
+        // Uses theme AppBar defaults
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -814,12 +813,12 @@ class _TinderLikeProfileScreenState extends State<TinderLikeProfileScreen> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [AppTheme.primarySubtle, AppTheme.primaryLight],
+          colors: [AppTheme.surfaceElevated, AppTheme.surfaceColor],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.primaryLight),
+        border: Border.all(color: AppTheme.dividerColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -840,13 +839,13 @@ class _TinderLikeProfileScreenState extends State<TinderLikeProfileScreen> {
           const SizedBox(height: 8),
           LinearProgressIndicator(
             value: _profileCompletionPercentage / 100,
-            backgroundColor: Colors.grey[300],
+            backgroundColor: AppTheme.surfaceElevated,
             valueColor: AlwaysStoppedAnimation<Color>(progressColor),
           ),
           const SizedBox(height: 8),
           Text(
             message,
-            style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+            style: const TextStyle(fontSize: 14, color: AppTheme.textSecondary),
           ),
           const SizedBox(height: 4),
           Text(
@@ -877,7 +876,7 @@ class _TinderLikeProfileScreenState extends State<TinderLikeProfileScreen> {
             const Spacer(),
             Text(
               '${_photoSlots.length}/9',
-              style: TextStyle(color: Colors.grey[600]),
+              style: const TextStyle(color: AppTheme.textSecondary),
             ),
           ],
         ),
@@ -1202,7 +1201,7 @@ class _TinderLikeProfileScreenState extends State<TinderLikeProfileScreen> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey),
+          border: Border.all(color: AppTheme.dividerColor),
           borderRadius: BorderRadius.circular(4),
         ),
         child: Row(
@@ -1213,7 +1212,7 @@ class _TinderLikeProfileScreenState extends State<TinderLikeProfileScreen> {
                   ? '${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}'
                   : 'Select Birth Date *',
               style: TextStyle(
-                color: _selectedDate != null ? Colors.black : Colors.grey[600],
+                color: _selectedDate != null ? AppTheme.textPrimary : AppTheme.textTertiary,
               ),
             ),
             const Icon(Icons.calendar_today),
@@ -1337,7 +1336,7 @@ class _TinderLikeProfileScreenState extends State<TinderLikeProfileScreen> {
         ),
         Text(
           '${profile.age} years old',
-          style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+          style: const TextStyle(fontSize: 18, color: AppTheme.textSecondary),
         ),
         const SizedBox(height: 16),
         if (profile.bio?.isNotEmpty == true) ...[
@@ -1400,13 +1399,13 @@ class _TinderLikeProfileScreenState extends State<TinderLikeProfileScreen> {
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: Colors.grey[600]),
+          Icon(icon, size: 20, color: AppTheme.textTertiary),
           const SizedBox(width: 12),
           Text(
             '$label: ',
             style: TextStyle(
               fontWeight: FontWeight.w500,
-              color: Colors.grey[700],
+              color: AppTheme.textSecondary,
             ),
           ),
           Expanded(child: Text(value)),

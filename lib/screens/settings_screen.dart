@@ -21,8 +21,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Settings'),
-        backgroundColor: AppTheme.primaryColor,
-        foregroundColor: Colors.white,
+        // Uses theme default AppBar
+        // Uses theme default foreground
       ),
       body: ListView(
         children: [
@@ -217,7 +217,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onPressed: _showLogoutDialog,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
+                // Uses theme default foreground
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(25),

@@ -22,7 +22,6 @@ import 'tinder_like_profile_screen.dart';
 import 'services/api_service.dart';
 import 'config/environment.dart';
 import 'config/dev_mode.dart';
-import 'services/dev_auto_login.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -38,16 +37,9 @@ Future<void> main() async {
   final appState = AppState();
   await appState.initialize();
 
-  // Always auto-login with demo user if no valid session
-  if (!appState.hasValidAuthSession(gracePeriod: const Duration(seconds: 5))) {
-    await appState.logout();
-    await DevAutoLogin.ensureDemoSession();
-    await appState.initialize(forceRefresh: true);
-  }
-
+  // No auto-login — always show login screen with pre-filled credentials
   if (kDebugMode) {
-    debugPrint('👤 Logged in as: ${appState.userId ?? "NONE"}');
-    debugPrint('🔑 Token: ${appState.authToken != null ? "YES" : "NO"}');
+    debugPrint('👤 Session: ${appState.hasValidAuthSession() ? "VALID" : "NONE"}');
   }
 
   runApp(const DatingApp());
@@ -61,7 +53,7 @@ class DatingApp extends StatelessWidget {
     return MaterialApp(
       title: 'DatingApp',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
+      theme: AppTheme.darkTheme,
       initialRoute: _getInitialRoute(),
       routes: {
         // Auth routes
@@ -117,7 +109,7 @@ class DatingApp extends StatelessWidget {
       return '/home';
     }
     
-    // Otherwise fall back to welcome/login
-    return DevMode.enabled ? '/welcome' : '/login';
+    // Otherwise show login screen (with pre-filled demo credentials in dev mode)
+    return '/login';
   }
 }

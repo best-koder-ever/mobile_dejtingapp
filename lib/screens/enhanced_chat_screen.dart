@@ -212,13 +212,13 @@ class _EnhancedChatScreenState extends State<EnhancedChatScreen>
                     maxWidth: MediaQuery.of(context).size.width * 0.75,
                   ),
                   decoration: BoxDecoration(
-                    color: isMe ? AppTheme.primaryColor : const Color(0xFFF3F4F6),
+                    color: isMe ? AppTheme.primaryColor : AppTheme.surfaceElevated,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
                     message.content,
                     style: TextStyle(
-                      color: isMe ? Colors.white : Colors.black87,
+                      color: Colors.white,
                       fontSize: 16,
                     ),
                   ),
@@ -230,7 +230,7 @@ class _EnhancedChatScreenState extends State<EnhancedChatScreen>
                     Text(
                       _formatTime(message.timestamp),
                       style: TextStyle(
-                        color: Colors.grey[600],
+                        color: AppTheme.textTertiary,
                         fontSize: 12,
                       ),
                     ),
@@ -239,7 +239,7 @@ class _EnhancedChatScreenState extends State<EnhancedChatScreen>
                       Icon(
                         Icons.done_all,
                         size: 12,
-                        color: Colors.grey[600],
+                        color: AppTheme.textTertiary,
                       ),
                     ],
                   ],
@@ -290,7 +290,7 @@ class _EnhancedChatScreenState extends State<EnhancedChatScreen>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: statusColor.withOpacity(0.1),
+        color: statusColor.withOpacity(0.15),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -317,8 +317,6 @@ class _EnhancedChatScreenState extends State<EnhancedChatScreen>
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: AppTheme.primaryColor,
-        foregroundColor: Colors.white,
         title: Row(
           children: [
             CircleAvatar(
@@ -375,16 +373,16 @@ class _EnhancedChatScreenState extends State<EnhancedChatScreen>
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(12),
-            color: Colors.blue[50],
+            color: AppTheme.surfaceElevated,
             child: Row(
               children: [
-                Icon(Icons.security, color: Colors.blue[700], size: 16),
+                Icon(Icons.security, color: AppTheme.primaryColor, size: 16),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     'Your safety matters. This conversation is monitored for inappropriate content.',
                     style: TextStyle(
-                      color: Colors.blue[700],
+                      color: AppTheme.textSecondary,
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                     ),
@@ -408,14 +406,14 @@ class _EnhancedChatScreenState extends State<EnhancedChatScreen>
                             Icon(
                               Icons.chat_bubble_outline,
                               size: 64,
-                              color: Colors.grey[400],
+                              color: AppTheme.textTertiary,
                             ),
                             const SizedBox(height: 16),
                             Text(
                               'Start your conversation!',
                               style: TextStyle(
                                 fontSize: 18,
-                                color: Colors.grey[600],
+                                color: AppTheme.textSecondary,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -424,7 +422,7 @@ class _EnhancedChatScreenState extends State<EnhancedChatScreen>
                               'Say hello to ${profile?.firstName ?? 'your match'}',
                               style: TextStyle(
                                 fontSize: 14,
-                                color: Colors.grey[500],
+                                color: AppTheme.textTertiary,
                               ),
                             ),
                           ],
@@ -447,10 +445,10 @@ class _EnhancedChatScreenState extends State<EnhancedChatScreen>
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppTheme.surfaceColor,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.grey.withOpacity(0.1),
+                  color: Colors.black.withOpacity(0.3),
                   blurRadius: 5,
                   offset: const Offset(0, -1),
                 ),
@@ -469,7 +467,7 @@ class _EnhancedChatScreenState extends State<EnhancedChatScreen>
                           borderSide: BorderSide.none,
                         ),
                         filled: true,
-                        fillColor: Colors.grey[100],
+                        fillColor: AppTheme.surfaceElevated,
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 20,
                           vertical: 10,
@@ -484,7 +482,7 @@ class _EnhancedChatScreenState extends State<EnhancedChatScreen>
                   const SizedBox(width: 12),
                   FloatingActionButton.small(
                     onPressed: _isSending ? null : _sendMessage,
-                    backgroundColor: _isSending ? Colors.grey : AppTheme.primaryColor,
+                    backgroundColor: _isSending ? AppTheme.surfaceElevated : AppTheme.primaryColor,
                     child: _isSending
                         ? const SizedBox(
                             width: 16,

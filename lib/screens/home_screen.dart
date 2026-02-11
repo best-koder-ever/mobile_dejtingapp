@@ -611,12 +611,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [Color(0xFFFFF0ED), Color(0xFFFFE8E3)],
+            colors: [AppTheme.surfaceElevated, AppTheme.surfaceColor],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(AppTheme.radiusLg),
-          border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.2)),
+          border: Border.all(color: AppTheme.dividerColor),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -972,7 +972,7 @@ class _LikeCommentSheetState extends State<_LikeCommentSheet> {
               hintText: 'Say something nice...',
               counterStyle: const TextStyle(color: AppTheme.textTertiary),
               filled: true,
-              fillColor: const Color(0xFFF3F4F6),
+              fillColor: AppTheme.surfaceElevated,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
                 borderSide: BorderSide.none,

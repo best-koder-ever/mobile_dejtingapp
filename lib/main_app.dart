@@ -1,3 +1,4 @@
+import 'package:dejtingapp/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'screens/home_screen.dart';
 import 'screens/enhanced_matches_screen.dart';
@@ -40,16 +41,17 @@ class _MainAppState extends State<MainApp> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: IndexedStack(index: _currentIndex, children: _screens),
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          border: Border(top: BorderSide(color: AppTheme.dividerColor, width: 0.5)),
+        ),
+        child: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) {
           setState(() {
             _currentIndex = index;
           });
         },
-        selectedItemColor: const Color(0xFFFF6B6B),
-        unselectedItemColor: Colors.grey,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.explore), label: 'Discover'),
           BottomNavigationBarItem(icon: Icon(Icons.favorite), label: 'Matches'),
@@ -59,7 +61,7 @@ class _MainAppState extends State<MainApp> {
             label: 'Settings',
           ),
         ],
-      ),
+      )),
     );
   }
 }

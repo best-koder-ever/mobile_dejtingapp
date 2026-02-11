@@ -1,58 +1,70 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// DatingApp unified theme — matches onboarding wizard styling
-/// Primary: #FF6B6B (warm salmon) — used across all wizard screens
-/// Dark surfaces: #1A1A2E (deep navy) — used for immersive screens
+/// DatingApp dark premium theme — matches Welcome screen's immersive aesthetic
+/// Coral #FF7F50 → Purple #7F13EC gradient, dark surfaces, high contrast
 class AppTheme {
   AppTheme._();
 
-  // ─── Brand Colors ─────────────────────────────────────
-  static const primaryColor = Color(0xFFFF6B6B);     // Warm salmon — wizard CTA
-  static const primaryLight = Color(0xFFFF9E9E);     // Light salmon
-  static const primaryDark = Color(0xFFE84545);      // Deep salmon
-  static const primarySubtle = Color(0x1AFF6B6B);    // 10% primary for chips/bg
+  // ─── Brand Colors (matched to Welcome screen) ────────
+  static const primaryColor = Color(0xFFFF7F50);      // Coral — primary CTA
+  static const primaryLight = Color(0xFFFFAB91);       // Light coral
+  static const primaryDark = Color(0xFFE65100);        // Deep coral
+  static const primarySubtle = Color(0x1AFF7F50);      // 10% coral for chips/bg
 
-  static const secondaryColor = Color(0xFF6C63FF);   // Purple accent
-  static const tertiaryColor = Color(0xFF00C878);     // Green — wizard checkmarks
-  static const tealAccent = Color(0xFF4ECDC4);        // Teal — super like
+  static const secondaryColor = Color(0xFF7F13EC);     // Purple accent (gradient end)
+  static const tertiaryColor = Color(0xFF00E676);      // Green — success/verified
+  static const tealAccent = Color(0xFF4ECDC4);          // Teal — super like
 
-  // ─── Surface Colors ───────────────────────────────────
-  static const scaffoldLight = Color(0xFFFAFAFA);    // Off-white scaffold
-  static const surfaceColor = Color(0xFFFFFFFF);      // Cards, sheets
-  static const surfaceDark = Color(0xFF1A1A2E);       // Deep navy — immersive bg
-  static const surfaceDarkAlt = Color(0xFF16213E);    // Slightly lighter navy
-  static const dividerColor = Color(0xFFE5E7EB);
+  // ─── Surface Colors (dark premium) ────────────────────
+  static const scaffoldDark = Color(0xFF0D0D1A);       // Near-black scaffold
+  static const surfaceColor = Color(0xFF1A1A2E);        // Dark navy cards
+  static const surfaceDark = Color(0xFF1A1A2E);         // Deep navy — immersive bg
+  static const surfaceDarkAlt = Color(0xFF16213E);      // Slightly lighter navy
+  static const surfaceElevated = Color(0xFF252540);     // Elevated cards/modals
+  static const dividerColor = Color(0xFF2A2A45);        // Subtle dark dividers
 
   // ─── Text Colors ──────────────────────────────────────
-  static const textPrimary = Color(0xFF1A1A1A);
-  static const textSecondary = Color(0xFF6B7280);
-  static const textTertiary = Color(0xFF9CA3AF);
-  static const textOnPrimary = Color(0xFFFFFFFF);
+  static const textPrimary = Color(0xFFFFFFFF);         // White — primary text
+  static const textSecondary = Color(0xB3FFFFFF);       // 70% white
+  static const textTertiary = Color(0x66FFFFFF);        // 40% white
+  static const textOnPrimary = Color(0xFFFFFFFF);       // White on coral
   static const textOnDark = Color(0xFFFFFFFF);
-  static const textOnDarkSecondary = Color(0xB3FFFFFF); // 70% white
+  static const textOnDarkSecondary = Color(0xB3FFFFFF);
 
   // ─── Semantic Colors ──────────────────────────────────
-  static const successColor = Color(0xFF00C878);
-  static const errorColor = Color(0xFFE63946);
-  static const warningColor = Color(0xFFF59E0B);
-  static const infoColor = Color(0xFF3B82F6);
+  static const successColor = Color(0xFF00E676);
+  static const errorColor = Color(0xFFFF5252);
+  static const warningColor = Color(0xFFFFB74D);
+  static const infoColor = Color(0xFF64B5F6);
 
-  // ─── Gradient Presets ─────────────────────────────────
+  // ─── Gradient Presets (Welcome screen style) ──────────
+  static const brandGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [primaryColor, secondaryColor],
+  );
+
   static const primaryGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFFFF6B6B), Color(0xFFFF8E8E)],
+    colors: [Color(0xFFFF7F50), Color(0xFFFF6B6B)],
   );
 
   static const darkGradient = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    colors: [Color(0xFF1A1A2E), Color(0xFF16213E)],
+    colors: [Color(0xFF1A1A2E), Color(0xFF0D0D1A)],
   );
 
   static const shimmerGradient = LinearGradient(
-    colors: [Color(0xFFFF6B6B), Color(0xFFFF9E9E), Color(0xFFFFCDD2)],
+    colors: [Color(0xFFFF7F50), Color(0xFF7F13EC), Color(0xFFFF7F50)],
+  );
+
+  static const surfaceGradient = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: [surfaceColor, scaffoldDark],
   );
 
   // ─── Spacing (8pt grid) ───────────────────────────────
@@ -72,14 +84,37 @@ class AppTheme {
   static const double radiusXl = 24;
   static const double radiusFull = 100;
 
-  // ─── Light Theme ──────────────────────────────────────
-  static ThemeData lightTheme = ThemeData(
-    useMaterial3: true,
-    brightness: Brightness.light,
+  // ─── Helper: Dark card decoration ─────────────────────
+  static BoxDecoration get cardDecoration => BoxDecoration(
+    color: surfaceColor,
+    borderRadius: BorderRadius.circular(radiusLg),
+    border: Border.all(color: dividerColor, width: 0.5),
+  );
 
-    colorScheme: ColorScheme.light(
+  static BoxDecoration get elevatedCardDecoration => BoxDecoration(
+    color: surfaceElevated,
+    borderRadius: BorderRadius.circular(radiusLg),
+    border: Border.all(color: dividerColor, width: 0.5),
+    boxShadow: [
+      BoxShadow(
+        color: Colors.black.withValues(alpha: 0.3),
+        blurRadius: 12,
+        offset: const Offset(0, 4),
+      ),
+    ],
+  );
+
+  // ─── Legacy alias (keep for existing code) ────────────
+  static const scaffoldLight = scaffoldDark;
+
+  // ─── Dark Theme ───────────────────────────────────────
+  static ThemeData darkTheme = ThemeData(
+    useMaterial3: true,
+    brightness: Brightness.dark,
+
+    colorScheme: ColorScheme.dark(
       primary: primaryColor,
-      primaryContainer: primaryLight,
+      primaryContainer: primaryDark,
       secondary: secondaryColor,
       tertiary: tertiaryColor,
       surface: surfaceColor,
@@ -90,10 +125,10 @@ class AppTheme {
       outline: dividerColor,
     ),
 
-    scaffoldBackgroundColor: scaffoldLight,
+    scaffoldBackgroundColor: scaffoldDark,
     dividerColor: dividerColor,
 
-    // Typography — Poppins headings, Inter body
+    // Typography — Poppins headings, Inter body (white text)
     textTheme: TextTheme(
       displayLarge: GoogleFonts.poppins(
         fontSize: 32, fontWeight: FontWeight.bold,
@@ -136,7 +171,7 @@ class AppTheme {
       ),
     ),
 
-    // AppBar
+    // AppBar — dark glass-like
     appBarTheme: AppBarTheme(
       backgroundColor: surfaceColor,
       foregroundColor: textPrimary,
@@ -148,7 +183,7 @@ class AppTheme {
       ),
     ),
 
-    // Cards
+    // Cards — dark glass
     cardTheme: CardThemeData(
       color: surfaceColor,
       elevation: 0,
@@ -158,7 +193,7 @@ class AppTheme {
       ),
     ),
 
-    // Buttons
+    // Buttons — coral CTAs
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: primaryColor,
@@ -196,13 +231,17 @@ class AppTheme {
       ),
     ),
 
-    // Inputs
+    // Inputs — dark filled
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: const Color(0xFFF3F4F6),
+      fillColor: surfaceElevated,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(radiusMd),
-        borderSide: BorderSide.none,
+        borderSide: const BorderSide(color: dividerColor),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(radiusMd),
+        borderSide: const BorderSide(color: dividerColor),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(radiusMd),
@@ -210,27 +249,28 @@ class AppTheme {
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       hintStyle: GoogleFonts.inter(color: textTertiary, fontSize: 14),
+      labelStyle: GoogleFonts.inter(color: textSecondary, fontSize: 14),
     ),
 
-    // Chips
+    // Chips — dark with coral accent
     chipTheme: ChipThemeData(
-      backgroundColor: const Color(0xFFF3F4F6),
+      backgroundColor: surfaceElevated,
       selectedColor: primarySubtle,
       labelStyle: GoogleFonts.inter(fontSize: 13, color: textPrimary),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
       ),
-      side: BorderSide.none,
+      side: const BorderSide(color: dividerColor, width: 0.5),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     ),
 
-    // Bottom Nav
+    // Bottom Nav — dark
     bottomNavigationBarTheme: const BottomNavigationBarThemeData(
       type: BottomNavigationBarType.fixed,
       backgroundColor: surfaceColor,
       selectedItemColor: primaryColor,
       unselectedItemColor: textTertiary,
-      elevation: 8,
+      elevation: 0,
       selectedLabelStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
       unselectedLabelStyle: TextStyle(fontSize: 11),
     ),
@@ -248,7 +288,7 @@ class AppTheme {
     // Progress indicator
     progressIndicatorTheme: const ProgressIndicatorThemeData(
       color: primaryColor,
-      linearTrackColor: Color(0xFFE5E7EB),
+      linearTrackColor: dividerColor,
       linearMinHeight: 4,
     ),
 
@@ -259,11 +299,64 @@ class AppTheme {
       space: 0,
     ),
 
-    // Floating Action Button
+    // FAB
     floatingActionButtonTheme: const FloatingActionButtonThemeData(
       backgroundColor: primaryColor,
       foregroundColor: textOnPrimary,
       elevation: 2,
     ),
+
+    // Dialog
+    dialogTheme: DialogThemeData(
+      backgroundColor: surfaceElevated,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(radiusLg),
+      ),
+    ),
+
+    // BottomSheet
+    bottomSheetTheme: const BottomSheetThemeData(
+      backgroundColor: surfaceColor,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+    ),
+
+    // SnackBar
+    snackBarTheme: SnackBarThemeData(
+      backgroundColor: surfaceElevated,
+      contentTextStyle: GoogleFonts.inter(color: textPrimary, fontSize: 14),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      behavior: SnackBarBehavior.floating,
+    ),
+
+    // Switch
+    switchTheme: SwitchThemeData(
+      thumbColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) return primaryColor;
+        return textTertiary;
+      }),
+      trackColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) return primarySubtle;
+        return dividerColor;
+      }),
+    ),
+
+    // Slider
+    sliderTheme: const SliderThemeData(
+      activeTrackColor: primaryColor,
+      inactiveTrackColor: dividerColor,
+      thumbColor: primaryColor,
+      overlayColor: primarySubtle,
+    ),
+
+    // ListTile
+    listTileTheme: const ListTileThemeData(
+      iconColor: primaryColor,
+      textColor: textPrimary,
+    ),
   );
+
+  // ─── Legacy alias ─────────────────────────────────────
+  static ThemeData lightTheme = darkTheme;
 }
