@@ -464,6 +464,20 @@ enum MessageType {
 }
 
 /// A candidate profile returned by the matchmaking service for swiping
+class PromptAnswer {
+  final String question;
+  final String answer;
+
+  PromptAnswer({required this.question, required this.answer});
+
+  factory PromptAnswer.fromJson(Map<String, dynamic> json) {
+    return PromptAnswer(
+      question: json['question'] ?? '',
+      answer: json['answer'] ?? '',
+    );
+  }
+}
+
 class MatchCandidate {
   final String userId;
   final String displayName;
@@ -476,6 +490,12 @@ class MatchCandidate {
   final double compatibility;
   final List<String> interestsOverlap;
   final String? occupation;
+  final List<PromptAnswer> prompts;
+  final String? voicePromptUrl;
+  final int? height;
+  final String? education;
+  final String? gender;
+  final bool isVerified;
 
   MatchCandidate({
     required this.userId,
@@ -489,6 +509,12 @@ class MatchCandidate {
     this.compatibility = 0.0,
     this.interestsOverlap = const [],
     this.occupation,
+    this.prompts = const [],
+    this.voicePromptUrl,
+    this.height,
+    this.education,
+    this.gender,
+    this.isVerified = false,
   });
 
   factory MatchCandidate.fromJson(Map<String, dynamic> json) {
@@ -498,6 +524,15 @@ class MatchCandidate {
     }
     final primaryPhoto =
         json['primaryPhotoUrl'] ?? json['photoUrl'] ?? (photos.isNotEmpty ? photos.first : null);
+
+    final promptsList = <PromptAnswer>[];
+    if (json['prompts'] is List) {
+      for (final p in json['prompts'] as List) {
+        if (p is Map<String, dynamic>) {
+          promptsList.add(PromptAnswer.fromJson(p));
+        }
+      }
+    }
 
     return MatchCandidate(
       userId: (json['userId'] ?? json['id'] ?? '').toString(),
@@ -515,8 +550,16 @@ class MatchCandidate {
               : 0.0),
       interestsOverlap: json['interestsOverlap'] is List
           ? (json['interestsOverlap'] as List).map((e) => e.toString()).toList()
-          : const [],
+          : (json['interests'] is List
+              ? (json['interests'] as List).map((e) => e.toString()).toList()
+              : const []),
       occupation: json['occupation'],
+      prompts: promptsList,
+      voicePromptUrl: json['voicePromptUrl'],
+      height: json['height'] is num ? (json['height'] as num).toInt() : null,
+      education: json['education'],
+      gender: json['gender'],
+      isVerified: json['isVerified'] == true,
     );
   }
 

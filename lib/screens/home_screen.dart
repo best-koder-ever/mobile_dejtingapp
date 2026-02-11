@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../api_services.dart';
-import '../models.dart';
-import '../services/swipe_cache_service.dart';
+import 'package:dejtingapp/theme/app_theme.dart';
+import 'package:dejtingapp/api_services.dart';
+import 'package:dejtingapp/models.dart';
 
+/// Hinge-style scrollable Discover screen
+/// Shows one profile at a time as a vertically-scrollable card
+/// with interleaved photos, prompts, and info sections.
+/// Users can like specific content or skip the entire profile.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -12,744 +16,686 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
-  // Animation
-  late AnimationController _swipeController;
-  late Animation<Offset> _slideAnimation;
-  late Animation<double> _rotationAnimation;
-  late Animation<double> _fadeAnimation;
-
-  // State
   List<MatchCandidate> _candidates = [];
   int _currentIndex = 0;
-  final SwipeCacheService _swipeCache = SwipeCacheService();
-  int _pendingSwipeCount = 0;
   bool _isLoading = true;
-  bool _isSwiping = false;
-  String? _errorMessage;
-
-  // Drag state
-  Offset _dragOffset = Offset.zero;
-  bool _isDragging = false;
-
-  // Prefetch threshold — load more when this many cards remain
-  static const _prefetchThreshold = 3;
+  bool _hasError = false;
+  final ScrollController _scrollController = ScrollController();
+  late AnimationController _fadeController;
 
   @override
   void initState() {
     super.initState();
-    _swipeController = AnimationController(
-      duration: const Duration(milliseconds: 350),
+    _fadeController = AnimationController(
       vsync: this,
+      duration: const Duration(milliseconds: 400),
     );
-    _slideAnimation = Tween<Offset>(
-      begin: Offset.zero,
-      end: const Offset(1.5, 0),
-    ).animate(CurvedAnimation(parent: _swipeController, curve: Curves.easeOut));
-    _rotationAnimation = Tween<double>(begin: 0.0, end: 0.3).animate(
-      CurvedAnimation(parent: _swipeController, curve: Curves.easeOut),
-    );
-    _fadeAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
-      CurvedAnimation(parent: _swipeController, curve: Curves.easeOut),
-    );
-    _initSwipeCache();
     _loadCandidates();
-  }
-
-  Future<void> _initSwipeCache() async {
-    await _swipeCache.init();
-    _swipeCache.onPendingSwipesChanged = () {
-      if (mounted) {
-        setState(() => _pendingSwipeCount = _swipeCache.pendingSwipeCount);
-      }
-    };
-    _swipeCache.onSwipeDrained = (targetUserId, isMatch, matchId) {
-      if (isMatch && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('🎉 New match discovered from queued swipe!'),
-            backgroundColor: Colors.purple,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 4),
-          ),
-        );
-      }
-    };
-    if (mounted) {
-      setState(() => _pendingSwipeCount = _swipeCache.pendingSwipeCount);
-    }
   }
 
   @override
   void dispose() {
-    _swipeCache.dispose();
-    _swipeController.dispose();
+    _scrollController.dispose();
+    _fadeController.dispose();
     super.dispose();
   }
-
-  // ─── Data Loading ───
 
   Future<void> _loadCandidates() async {
     setState(() {
       _isLoading = true;
-      _errorMessage = null;
+      _hasError = false;
     });
 
     try {
       final candidates = await matchmakingApi.getCandidates();
-      // Cache for offline use
-      _swipeCache.cacheCandidates(candidates);
       setState(() {
         _candidates = candidates;
         _currentIndex = 0;
         _isLoading = false;
       });
+      _fadeController.forward(from: 0);
     } catch (e) {
-      debugPrint('Failed to load candidates: $e');
-      // Try cached candidates as fallback
-      final cached = _swipeCache.getCachedCandidates();
-      if (cached.isNotEmpty) {
-        debugPrint('Using ${cached.length} cached candidates');
-        setState(() {
-          _candidates = cached;
-          _currentIndex = 0;
-          _isLoading = false;
-          _errorMessage = null;
-        });
-      } else {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = 'Could not load profiles. Check your connection.';
-        });
-      }
+      debugPrint('Error loading candidates: $e');
+      setState(() {
+        _isLoading = false;
+        _hasError = true;
+      });
     }
   }
 
-  Future<void> _prefetchIfNeeded() async {
-    final remaining = _candidates.length - _currentIndex - 1;
-    if (remaining <= _prefetchThreshold) {
-      try {
-        final more = await matchmakingApi.getCandidates(page: 2);
-        if (more.isNotEmpty && mounted) {
-          _swipeCache.cacheCandidates(more);
-          setState(() => _candidates.addAll(more));
-        }
-      } catch (_) {
-        // Swallow — best-effort prefetch
-      }
+  MatchCandidate? get _currentCandidate =>
+      _currentIndex < _candidates.length ? _candidates[_currentIndex] : null;
+
+  void _skipProfile() {
+    if (_currentIndex < _candidates.length - 1) {
+      setState(() => _currentIndex++);
+      _scrollController.jumpTo(0);
+      _fadeController.forward(from: 0);
+    } else {
+      setState(() => _currentIndex = _candidates.length);
     }
   }
 
-  // ─── Swipe Logic ───
+  void _likeProfile({String? likedContent}) {
+    final candidate = _currentCandidate;
+    if (candidate == null) return;
 
-  Future<void> _onSwipe(bool isLike) async {
-    if (_isSwiping || _currentIndex >= _candidates.length) return;
-
-    final candidate = _candidates[_currentIndex];
-    setState(() => _isSwiping = true);
-
-    // Animate card off screen
-    _slideAnimation = Tween<Offset>(
-      begin: Offset.zero,
-      end: Offset(isLike ? 1.5 : -1.5, -0.2),
-    ).animate(CurvedAnimation(parent: _swipeController, curve: Curves.easeOut));
-    _rotationAnimation = Tween<double>(
-      begin: 0.0,
-      end: isLike ? 0.3 : -0.3,
-    ).animate(CurvedAnimation(parent: _swipeController, curve: Curves.easeOut));
-
-    await _swipeController.forward();
-
-    // Send via cache service (sends immediately or queues for offline)
-    final cacheResult = await _swipeCache.recordSwipe(
-      targetUserId: candidate.userId,
-      isLike: isLike,
+    debugPrint(
+      '\u2764\uFE0F Liked profile ${candidate.userId}'
+      '${likedContent != null ? " (content: $likedContent)" : ""}',
     );
 
-    // Check for match (only if sent immediately)
-    if (cacheResult.sentImmediately && cacheResult.isMatch && mounted) {
-      final swipeResult = SwipeResponse(
-        isMatch: true,
-        matchId: cacheResult.matchId,
-        message: 'It\'s a match!',
-      );
-      _showMatchCelebration(candidate, swipeResult);
-    }
-
-    // If queued, show subtle indicator
-    if (cacheResult.queued && mounted) {
-      debugPrint('Swipe queued for ${candidate.displayName}');
-    }
-
-    // Advance to next card
-    if (mounted) {
-      setState(() {
-        _currentIndex++;
-        _isSwiping = false;
-        _dragOffset = Offset.zero;
-      });
-      _swipeController.reset();
-      _prefetchIfNeeded();
-    }
+    // TODO: Send like to backend via matchmakingApi.swipe()
+    _skipProfile();
   }
 
-  void _onDragStart(DragStartDetails details) {
-    if (_isSwiping) return;
-    setState(() => _isDragging = true);
+  void _onLikeContent(String contentType, String contentValue) {
+    _showLikeSheet(contentType, contentValue);
   }
 
-  void _onDragUpdate(DragUpdateDetails details) {
-    if (_isSwiping) return;
-    setState(() => _dragOffset += details.delta);
-  }
-
-  void _onDragEnd(DragEndDetails details) {
-    if (_isSwiping) return;
-    setState(() => _isDragging = false);
-
-    final screenWidth = MediaQuery.of(context).size.width;
-    final threshold = screenWidth * 0.3;
-
-    if (_dragOffset.dx.abs() > threshold) {
-      _onSwipe(_dragOffset.dx > 0); // right = like, left = pass
-    } else {
-      // Snap back
-      setState(() => _dragOffset = Offset.zero);
-    }
-  }
-
-  // ─── Match Celebration ───
-
-  void _showMatchCelebration(MatchCandidate candidate, SwipeResponse result) {
-    showDialog(
+  void _showLikeSheet(String contentType, String value) {
+    showModalBottomSheet(
       context: context,
-      barrierDismissible: false,
-      builder: (ctx) => _MatchCelebrationDialog(
-        candidate: candidate,
-        onSendMessage: () {
-          Navigator.of(ctx).pop();
-          // TODO: Navigate to chat with matchId
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) => _LikeCommentSheet(
+        contentType: contentType,
+        contentPreview: value,
+        onSend: (comment) {
+          Navigator.pop(ctx);
+          _likeProfile(likedContent: '$contentType: $value | comment: $comment');
         },
-        onKeepSwiping: () => Navigator.of(ctx).pop(),
+        onLikeOnly: () {
+          Navigator.pop(ctx);
+          _likeProfile(likedContent: '$contentType: $value');
+        },
       ),
     );
   }
 
-  // ─── Build ───
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppTheme.scaffoldLight,
       body: SafeArea(
-        child: Stack(
+        child: Column(
           children: [
-            _buildBody(),
-            // Pending swipe queue indicator
-            if (_pendingSwipeCount > 0)
-              Positioned(
-                top: 8,
-                right: 8,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.shade700,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.cloud_upload,
-                          color: Colors.white, size: 14),
-                      const SizedBox(width: 4),
-                      Text(
-                        '$_pendingSwipeCount pending',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+            _buildHeader(),
+            Expanded(child: _buildBody()),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: const BoxDecoration(
+        color: AppTheme.surfaceColor,
+        border: Border(bottom: BorderSide(color: AppTheme.dividerColor, width: 0.5)),
+      ),
+      child: Row(
+        children: [
+          Text(
+            'Discover',
+            style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const Spacer(),
+          if (_candidates.isNotEmpty)
+            Text(
+              '${_currentIndex + 1}/${_candidates.length}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          const SizedBox(width: 8),
+          IconButton(
+            icon: const Icon(Icons.tune_rounded, size: 22),
+            onPressed: () {},
+            style: IconButton.styleFrom(
+              backgroundColor: AppTheme.primarySubtle,
+              foregroundColor: AppTheme.primaryColor,
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildBody() {
     if (_isLoading) return _buildLoadingState();
-    if (_errorMessage != null) return _buildErrorState();
-    if (_currentIndex >= _candidates.length) return _buildEmptyState();
-    return _buildDiscoverView();
+    if (_hasError) return _buildErrorState();
+    final candidate = _currentCandidate;
+    if (candidate == null) return _buildEmptyState();
+    return _buildProfileView(candidate);
   }
 
-  // ─── States ───
-
   Widget _buildLoadingState() {
-    return Container(
-      decoration: _backgroundGradient(),
-      child: const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(color: Colors.white),
-            SizedBox(height: 16),
-            Text(
-              'Finding amazing people near you...',
-              style: TextStyle(color: Colors.white, fontSize: 16),
-            ),
-          ],
-        ),
+    return const Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CircularProgressIndicator(color: AppTheme.primaryColor),
+          SizedBox(height: 16),
+          Text('Finding people near you...'),
+        ],
       ),
     );
   }
 
   Widget _buildErrorState() {
-    return Container(
-      decoration: _backgroundGradient(),
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.cloud_off, size: 72, color: Colors.white70),
-              const SizedBox(height: 16),
-              Text(
-                _errorMessage!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white, fontSize: 16),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton.icon(
-                onPressed: _loadCandidates,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Try Again'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: const Color(0xFFFF6B9D),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 32, vertical: 12,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                ),
-              ),
-            ],
-          ),
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.wifi_off_rounded, size: 48, color: AppTheme.textTertiary),
+            const SizedBox(height: 16),
+            Text('Something went wrong', style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 8),
+            Text('Check your connection and try again',
+              style: Theme.of(context).textTheme.bodyMedium),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: _loadCandidates,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Try Again'),
+            ),
+          ],
         ),
       ),
     );
   }
 
   Widget _buildEmptyState() {
-    return Container(
-      decoration: _backgroundGradient(),
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.explore_outlined, size: 80, color: Colors.white70),
-              const SizedBox(height: 16),
-              const Text(
-                "You've seen everyone!",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: const BoxDecoration(
+                color: AppTheme.primarySubtle,
+                shape: BoxShape.circle,
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Check back later for new people near you.\nOr adjust your search preferences.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.85),
-                  fontSize: 15,
-                ),
-              ),
-              const SizedBox(height: 28),
-              ElevatedButton.icon(
-                onPressed: _loadCandidates,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Refresh'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: const Color(0xFFFF6B9D),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 32, vertical: 12,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                ),
-              ),
-            ],
-          ),
+              child: const Icon(Icons.explore_rounded, size: 48, color: AppTheme.primaryColor),
+            ),
+            const SizedBox(height: 24),
+            Text("You've seen everyone!",
+              style: Theme.of(context).textTheme.headlineMedium),
+            const SizedBox(height: 8),
+            Text('Check back later for new people',
+              style: Theme.of(context).textTheme.bodyMedium,
+              textAlign: TextAlign.center),
+            const SizedBox(height: 32),
+            OutlinedButton.icon(
+              onPressed: _loadCandidates,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Refresh'),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  // ─── Main Discover View ───
-
-  Widget _buildDiscoverView() {
-    final candidate = _candidates[_currentIndex];
-    final screenWidth = MediaQuery.of(context).size.width;
-    final dragPercent = _dragOffset.dx / screenWidth;
-
-    return Stack(
-      children: [
-        // Background gradient
-        Container(decoration: _backgroundGradient()),
-
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
+  // ─── Scrollable Profile View (Hinge-style) ───────────
+  Widget _buildProfileView(MatchCandidate candidate) {
+    return FadeTransition(
+      opacity: _fadeController,
+      child: Stack(
+        children: [
+          ListView(
+            controller: _scrollController,
+            padding: const EdgeInsets.only(bottom: 100),
             children: [
-              // Header
-              _buildHeader(),
-              const SizedBox(height: 12),
+              // Hero photo (first photo)
+              _buildHeroPhoto(
+                candidate.photoUrl ?? (candidate.photoUrls.isNotEmpty ? candidate.photoUrls[0] : null),
+                candidate.displayName,
+                candidate.age,
+                candidate.city,
+                candidate.isVerified,
+              ),
+              // Vitals bar (occupation, height, education, etc.)
+              _buildVitalsBar(candidate),
+              // All photos, prompts, voice interleaved
+              ..._buildInterleavedContent(candidate),
+              const SizedBox(height: 24),
+            ],
+          ),
+          Positioned(
+            left: 0, right: 0, bottom: 0,
+            child: _buildActionBar(),
+          ),
+        ],
+      ),
+    );
+  }
 
-              // Card stack
-              Expanded(
-                child: Stack(
+  Widget _buildHeroPhoto(String? photoUrl, String name, int age, String? city, bool isVerified) {
+    return GestureDetector(
+      onDoubleTap: () => _onLikeContent('photo', photoUrl ?? 'main'),
+      child: Container(
+        height: 480,
+        margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppTheme.radiusXl),
+          color: AppTheme.surfaceDark,
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppTheme.radiusXl),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (photoUrl != null && photoUrl.isNotEmpty)
+                CachedNetworkImage(
+                  imageUrl: photoUrl,
+                  fit: BoxFit.cover,
+                  placeholder: (_, __) => Container(
+                    color: AppTheme.surfaceDark,
+                    child: const Center(
+                      child: CircularProgressIndicator(color: AppTheme.primaryColor),
+                    ),
+                  ),
+                  errorWidget: (_, __, ___) => _buildPhotoPlaceholder(name),
+                )
+              else
+                _buildPhotoPlaceholder(name),
+
+              // Gradient overlay
+              Positioned(
+                bottom: 0, left: 0, right: 0,
+                child: Container(
+                  height: 160,
+                  decoration: BoxDecoration(
+                    borderRadius: const BorderRadius.vertical(
+                      bottom: Radius.circular(AppTheme.radiusXl),
+                    ),
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withValues(alpha: 0.7),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              // Name / Age / Verified overlay
+              Positioned(
+                bottom: 20, left: 20, right: 60,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Next card peek (if available)
-                    if (_currentIndex + 1 < _candidates.length)
-                      Positioned.fill(
-                        child: Transform.scale(
-                          scale: 0.92 + (0.08 * dragPercent.abs().clamp(0.0, 1.0)),
-                          child: Opacity(
-                            opacity: 0.6 + (0.4 * dragPercent.abs().clamp(0.0, 1.0)),
-                            child: _buildCandidateCard(
-                              _candidates[_currentIndex + 1],
-                              interactive: false,
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            name,
+                            style: const TextStyle(
+                              color: Colors.white, fontSize: 28,
+                              fontWeight: FontWeight.bold,
                             ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                      ),
-
-                    // Current card (animated or draggable)
-                    Positioned.fill(
-                      child: GestureDetector(
-                        onPanStart: _onDragStart,
-                        onPanUpdate: _onDragUpdate,
-                        onPanEnd: _onDragEnd,
-                        child: AnimatedBuilder(
-                          animation: _swipeController,
-                          builder: (context, child) {
-                            final animOffset = _swipeController.isAnimating
-                                ? _slideAnimation.value * screenWidth
-                                : _dragOffset;
-                            final rotation = _swipeController.isAnimating
-                                ? _rotationAnimation.value
-                                : dragPercent * 0.3;
-                            final opacity = _swipeController.isAnimating
-                                ? _fadeAnimation.value
-                                : 1.0;
-
-                            return Transform.translate(
-                              offset: animOffset,
-                              child: Transform.rotate(
-                                angle: rotation,
-                                child: Opacity(
-                                  opacity: opacity.clamp(0.0, 1.0),
-                                  child: Stack(
-                                    children: [
-                                      _buildCandidateCard(candidate, interactive: true),
-
-                                      // Like / Nope overlay
-                                      if (_isDragging && _dragOffset.dx.abs() > 40)
-                                        Positioned(
-                                          top: 40,
-                                          left: _dragOffset.dx > 0 ? 24 : null,
-                                          right: _dragOffset.dx < 0 ? 24 : null,
-                                          child: Transform.rotate(
-                                            angle: _dragOffset.dx > 0 ? -0.3 : 0.3,
-                                            child: Container(
-                                              padding: const EdgeInsets.symmetric(
-                                                horizontal: 16, vertical: 8,
-                                              ),
-                                              decoration: BoxDecoration(
-                                                border: Border.all(
-                                                  color: _dragOffset.dx > 0
-                                                      ? Colors.green
-                                                      : Colors.red,
-                                                  width: 3,
-                                                ),
-                                                borderRadius: BorderRadius.circular(8),
-                                              ),
-                                              child: Text(
-                                                _dragOffset.dx > 0 ? 'LIKE' : 'NOPE',
-                                                style: TextStyle(
-                                                  color: _dragOffset.dx > 0
-                                                      ? Colors.green
-                                                      : Colors.red,
-                                                  fontSize: 32,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
+                        const SizedBox(width: 8),
+                        Text(
+                          '$age',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.9),
+                            fontSize: 24, fontWeight: FontWeight.w300,
+                          ),
                         ),
-                      ),
+                        if (isVerified) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: const BoxDecoration(
+                              color: AppTheme.primaryColor,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.check, color: Colors.white, size: 14),
+                          ),
+                        ],
+                      ],
                     ),
+                    if (city != null) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(Icons.location_on_outlined, size: 14,
+                            color: Colors.white.withValues(alpha: 0.8)),
+                          const SizedBox(width: 4),
+                          Text(city, style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.8),
+                            fontSize: 14,
+                          )),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),
 
-              const SizedBox(height: 16),
-
-              // Action buttons
-              _buildActionButtons(),
+              // Like button on photo
+              Positioned(
+                bottom: 16, right: 16,
+                child: _buildContentLikeButton('photo', photoUrl ?? 'main'),
+              ),
             ],
           ),
         ),
-      ],
+      ),
     );
   }
 
-  // ─── Widgets ───
-
-  Widget _buildHeader() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        const Icon(Icons.location_on, color: Colors.white),
-        const Text(
-          'Discover',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        IconButton(
-          icon: const Icon(Icons.tune, color: Colors.white),
-          onPressed: () {
-            // TODO: Open filter settings
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCandidateCard(MatchCandidate candidate, {required bool interactive}) {
-    final photoUrl = candidate.photoUrl ??
-        (candidate.photoUrls.isNotEmpty ? candidate.photoUrls.first : null);
-    final compatibilityPercent = (candidate.compatibility * 100).round();
-
+  Widget _buildPhotoPlaceholder(String name) {
     return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.15),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+      decoration: const BoxDecoration(
+        gradient: AppTheme.darkGradient,
+      ),
+      child: Center(
+        child: Text(
+          name.isNotEmpty ? name[0].toUpperCase() : '?',
+          style: const TextStyle(
+            color: Colors.white, fontSize: 72, fontWeight: FontWeight.w300,
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVitalsBar(MatchCandidate c) {
+    final vitals = <Widget>[];
+
+    if (c.occupation != null && c.occupation!.isNotEmpty) {
+      vitals.add(_buildVitalChip(Icons.work_outline_rounded, c.occupation!));
+    }
+    if (c.height != null && c.height! > 0) {
+      vitals.add(_buildVitalChip(Icons.straighten_rounded, '${c.height} cm'));
+    }
+    if (c.education != null && c.education!.isNotEmpty) {
+      vitals.add(_buildVitalChip(Icons.school_outlined, c.education!));
+    }
+    if (c.distanceKm != null) {
+      vitals.add(_buildVitalChip(Icons.near_me_rounded, '${c.distanceKm!.toStringAsFixed(0)} km'));
+    }
+
+    if (vitals.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+      child: Wrap(spacing: 8, runSpacing: 8, children: vitals),
+    );
+  }
+
+  Widget _buildVitalChip(IconData icon, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.dividerColor),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: AppTheme.textSecondary),
+          const SizedBox(width: 6),
+          Text(label, style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: Stack(
-          fit: StackFit.expand,
+    );
+  }
+
+  /// Build interleaved content: Photo → Prompt → Photo → Prompt → Voice → Photo → Interests
+  List<Widget> _buildInterleavedContent(MatchCandidate candidate) {
+    final widgets = <Widget>[];
+    final photos = candidate.photoUrls;
+    final prompts = candidate.prompts;
+
+    int photoIdx = 1; // hero is index 0, start from 1
+    int promptIdx = 0;
+    bool voiceInserted = false;
+
+    // Bio card first if present (always show bio)
+    if (candidate.bio != null && candidate.bio!.isNotEmpty) {
+      widgets.add(_buildPromptCard('About me', candidate.bio!));
+    }
+
+    // Interleave remaining photos and API prompts
+    while (photoIdx < photos.length || promptIdx < prompts.length) {
+      // Add a prompt
+      if (promptIdx < prompts.length) {
+        widgets.add(_buildPromptCard(
+          prompts[promptIdx].question,
+          prompts[promptIdx].answer,
+        ));
+        promptIdx++;
+      }
+
+      // Add a photo
+      if (photoIdx < photos.length) {
+        widgets.add(_buildPhotoCard(photos[photoIdx], photoIdx + 1, photos.length));
+        photoIdx++;
+      }
+
+      // Insert voice prompt after the second content pair
+      if (!voiceInserted && candidate.voicePromptUrl != null && widgets.length >= 3) {
+        widgets.add(_buildVoicePromptCard(candidate.voicePromptUrl!, candidate.displayName));
+        voiceInserted = true;
+      }
+    }
+
+    // Voice prompt at end if not yet inserted
+    if (!voiceInserted && candidate.voicePromptUrl != null) {
+      widgets.add(_buildVoicePromptCard(candidate.voicePromptUrl!, candidate.displayName));
+    }
+
+    // Interests section
+    if (candidate.interestsOverlap.isNotEmpty) {
+      widgets.add(_buildInterestsSection(candidate.interestsOverlap));
+    }
+
+    return widgets;
+  }
+
+  Widget _buildPromptCard(String question, String answer) {
+    return GestureDetector(
+      onDoubleTap: () => _onLikeContent('prompt', answer),
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppTheme.surfaceColor,
+          borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+          border: Border.all(color: AppTheme.dividerColor, width: 0.5),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Photo
-            if (photoUrl != null)
+            Text(
+              question.toUpperCase(),
+              style: const TextStyle(
+                fontSize: 12, fontWeight: FontWeight.w700,
+                color: AppTheme.primaryColor, letterSpacing: 1.2,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              answer,
+              style: const TextStyle(
+                fontSize: 20, fontWeight: FontWeight.w500,
+                color: AppTheme.textPrimary, height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Align(
+              alignment: Alignment.bottomRight,
+              child: _buildContentLikeButton('prompt', answer),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPhotoCard(String photoUrl, int photoNumber, int totalPhotos) {
+    return GestureDetector(
+      onDoubleTap: () => _onLikeContent('photo', photoUrl),
+      child: Container(
+        height: 400,
+        margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+          color: AppTheme.surfaceDark,
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
               CachedNetworkImage(
                 imageUrl: photoUrl,
                 fit: BoxFit.cover,
                 placeholder: (_, __) => Container(
-                  color: Colors.grey[300],
-                  child: const Center(child: CircularProgressIndicator()),
+                  color: AppTheme.surfaceDark,
+                  child: const Center(
+                    child: CircularProgressIndicator(color: AppTheme.primaryColor),
+                  ),
                 ),
                 errorWidget: (_, __, ___) => Container(
-                  color: Colors.grey[300],
-                  child: const Icon(Icons.person, size: 80, color: Colors.grey),
-                ),
-              )
-            else
-              Container(
-                color: Colors.grey[300],
-                child: const Icon(Icons.person, size: 80, color: Colors.grey),
-              ),
-
-            // Gradient overlay
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    Colors.black.withValues(alpha: 0.25),
-                    Colors.black.withValues(alpha: 0.8),
-                  ],
-                  stops: const [0.45, 0.7, 1.0],
+                  color: AppTheme.surfaceDark,
+                  child: const Icon(Icons.image_outlined, color: AppTheme.textTertiary, size: 48),
                 ),
               ),
-            ),
-
-            // Compatibility Badge
-            if (compatibilityPercent > 0)
+              // Photo counter badge
               Positioned(
-                top: 16,
-                right: 16,
+                top: 12, right: 12,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF6B46C1), Color(0xFF9333EA)],
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF9333EA).withValues(alpha: 0.4),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+                    color: Colors.black.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
+                  child: Text(
+                    '$photoNumber/$totalPhotos',
+                    style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: 12, right: 12,
+                child: _buildContentLikeButton('photo', photoUrl),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVoicePromptCard(String voiceUrl, String name) {
+    return GestureDetector(
+      onDoubleTap: () => _onLikeContent('voice', voiceUrl),
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFFFFF0ED), Color(0xFFFFE8E3)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+          border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.2)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(Icons.mic_rounded, color: Colors.white, size: 22),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.whatshot, color: Colors.white, size: 16),
-                      const SizedBox(width: 4),
                       Text(
-                        '$compatibilityPercent%',
+                        'VOICE PROMPT',
+                        style: TextStyle(
+                          fontSize: 11, fontWeight: FontWeight.w700,
+                          color: AppTheme.primaryColor.withValues(alpha: 0.8),
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Hear ${name.split(' ').first}\'s voice',
                         style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
+                          fontSize: 16, fontWeight: FontWeight.w600,
+                          color: AppTheme.textPrimary,
                         ),
                       ),
                     ],
                   ),
                 ),
-              ),
-
-            // Info overlay at bottom
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Name and Age
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            '${candidate.displayName}, ${candidate.age}',
-                            style: const TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                              shadows: [
-                                Shadow(
-                                  offset: Offset(0, 1),
-                                  blurRadius: 3,
-                                  color: Colors.black45,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
+              ],
+            ),
+            const SizedBox(height: 16),
+            // Waveform visualization (decorative)
+            _buildWaveformVisual(),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                // Play button
+                Material(
+                  color: AppTheme.primaryColor,
+                  borderRadius: BorderRadius.circular(24),
+                  child: InkWell(
+                    onTap: () {
+                      // TODO: Play voice prompt audio
+                      debugPrint('Play voice prompt: $voiceUrl');
+                    },
+                    borderRadius: BorderRadius.circular(24),
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.play_arrow_rounded, color: Colors.white, size: 20),
+                          SizedBox(width: 6),
+                          Text('Play', style: TextStyle(
+                            color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600,
+                          )),
+                        ],
+                      ),
                     ),
-
-                    const SizedBox(height: 4),
-
-                    // Location / Distance
-                    if (candidate.distanceKm != null || candidate.city != null)
-                      Row(
-                        children: [
-                          const Icon(Icons.location_on, color: Colors.white70, size: 16),
-                          const SizedBox(width: 4),
-                          Text(
-                            _formatDistance(candidate),
-                            style: const TextStyle(color: Colors.white70, fontSize: 14),
-                          ),
-                        ],
-                      ),
-
-                    // Occupation
-                    if (candidate.occupation != null) ...[
-                      const SizedBox(height: 2),
-                      Row(
-                        children: [
-                          const Icon(Icons.work_outline, color: Colors.white70, size: 16),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              candidate.occupation!,
-                              style: const TextStyle(color: Colors.white70, fontSize: 14),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-
-                    // Bio
-                    if (candidate.bio != null && candidate.bio!.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        candidate.bio!,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.white.withValues(alpha: 0.9),
-                          height: 1.3,
-                        ),
-                      ),
-                    ],
-
-                    // Shared interests
-                    if (candidate.interestsOverlap.isNotEmpty) ...[
-                      const SizedBox(height: 10),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 4,
-                        children: candidate.interestsOverlap.take(4).map((interest) {
-                          return Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
-                            ),
-                            child: Text(
-                              interest,
-                              style: const TextStyle(color: Colors.white, fontSize: 12),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ],
-                  ],
+                  ),
                 ),
-              ),
+                const SizedBox(width: 8),
+                Text(
+                  '0:15',
+                  style: TextStyle(fontSize: 13, color: AppTheme.textSecondary.withValues(alpha: 0.7)),
+                ),
+                const Spacer(),
+                _buildContentLikeButton('voice', voiceUrl),
+              ],
             ),
           ],
         ),
@@ -757,215 +703,309 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildActionButtons() {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+  Widget _buildWaveformVisual() {
+    // Decorative waveform bars
+    return SizedBox(
+      height: 40,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: List.generate(30, (i) {
+          // Create a natural-looking waveform pattern
+          final heights = [0.3, 0.5, 0.7, 0.4, 0.9, 0.6, 0.8, 0.5, 0.3, 0.7,
+            0.95, 0.6, 0.4, 0.8, 0.5, 0.7, 0.3, 0.6, 0.9, 0.4,
+            0.7, 0.5, 0.8, 0.3, 0.6, 0.9, 0.5, 0.7, 0.4, 0.3];
+          final h = heights[i % heights.length] * 36;
+          return Expanded(
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 1),
+              height: h,
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  Widget _buildInterestsSection(List<String> interests) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor,
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+        border: Border.all(color: AppTheme.dividerColor, width: 0.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Pass
-          _buildCircleButton(
-            icon: Icons.close,
-            color: Colors.grey,
-            bgColor: Colors.white,
-            size: 56,
-            onTap: () => _onSwipe(false),
+          const Text(
+            'INTERESTS',
+            style: TextStyle(
+              fontSize: 12, fontWeight: FontWeight.w700,
+              color: AppTheme.primaryColor, letterSpacing: 1.2,
+            ),
           ),
-          // Super Like
-          _buildCircleButton(
-            icon: Icons.star,
-            color: Colors.white,
-            bgColor: const Color(0xFF4ECDC4),
-            size: 48,
-            onTap: () => _onSwipe(true), // treat as like for now
-          ),
-          // Like
-          _buildCircleButton(
-            icon: Icons.favorite,
-            color: Colors.white,
-            bgColor: Colors.pink,
-            size: 64,
-            onTap: () => _onSwipe(true),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8, runSpacing: 8,
+            children: interests.map((interest) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppTheme.primarySubtle,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                interest,
+                style: const TextStyle(
+                  fontSize: 13, fontWeight: FontWeight.w500,
+                  color: AppTheme.primaryDark,
+                ),
+              ),
+            )).toList(),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildCircleButton({
+  Widget _buildContentLikeButton(String type, String value) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _onLikeContent(type, value),
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: AppTheme.surfaceColor.withValues(alpha: 0.9),
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 8, offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.favorite_border_rounded,
+            color: AppTheme.primaryColor,
+            size: 20,
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ─── Sticky Action Bar ────────────────────────────────
+  Widget _buildActionBar() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            AppTheme.scaffoldLight.withValues(alpha: 0),
+            AppTheme.scaffoldLight,
+            AppTheme.scaffoldLight,
+          ],
+          stops: const [0.0, 0.3, 1.0],
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _buildActionButton(
+            icon: Icons.close_rounded,
+            color: AppTheme.textTertiary,
+            bgColor: AppTheme.surfaceColor,
+            size: 56, iconSize: 28,
+            onTap: _skipProfile,
+            label: 'Skip',
+          ),
+          const SizedBox(width: 16),
+          _buildActionButton(
+            icon: Icons.favorite_rounded,
+            color: Colors.white,
+            bgColor: AppTheme.primaryColor,
+            size: 64, iconSize: 32,
+            onTap: () => _likeProfile(),
+            label: 'Like',
+            elevated: true,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButton({
     required IconData icon,
     required Color color,
     required Color bgColor,
     required double size,
+    required double iconSize,
     required VoidCallback onTap,
+    required String label,
+    bool elevated = false,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          color: bgColor,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: bgColor.withValues(alpha: 0.35),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        GestureDetector(
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            width: size, height: size,
+            decoration: BoxDecoration(
+              color: bgColor,
+              shape: BoxShape.circle,
+              border: elevated ? null : Border.all(color: AppTheme.dividerColor, width: 1.5),
+              boxShadow: elevated ? [
+                BoxShadow(
+                  color: bgColor.withValues(alpha: 0.4),
+                  blurRadius: 16, offset: const Offset(0, 4),
+                ),
+              ] : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 8, offset: const Offset(0, 2),
+                ),
+              ],
             ),
-          ],
+            child: Icon(icon, color: color, size: iconSize),
+          ),
         ),
-        child: Icon(icon, color: color, size: size * 0.45),
-      ),
-    );
-  }
-
-  // ─── Helpers ───
-
-  String _formatDistance(MatchCandidate candidate) {
-    if (candidate.distanceKm != null) {
-      final km = candidate.distanceKm!;
-      if (km < 1) return '${(km * 1000).round()} m away';
-      return '${km.toStringAsFixed(1)} km away';
-    }
-    return candidate.city ?? '';
-  }
-
-  BoxDecoration _backgroundGradient() {
-    return const BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [Color(0xFFFF6B9D), Color(0xFFFF8E8E)],
-      ),
+        const SizedBox(height: 4),
+        Text(label, style: const TextStyle(
+          fontSize: 11, color: AppTheme.textTertiary,
+          fontWeight: FontWeight.w500,
+        )),
+      ],
     );
   }
 }
 
-// ─── Match Celebration Dialog ───
+// Like + Comment Bottom Sheet (Hinge-style)
+class _LikeCommentSheet extends StatefulWidget {
+  final String contentType;
+  final String contentPreview;
+  final Function(String comment) onSend;
+  final VoidCallback onLikeOnly;
 
-class _MatchCelebrationDialog extends StatelessWidget {
-  final MatchCandidate candidate;
-  final VoidCallback onSendMessage;
-  final VoidCallback onKeepSwiping;
-
-  const _MatchCelebrationDialog({
-    required this.candidate,
-    required this.onSendMessage,
-    required this.onKeepSwiping,
+  const _LikeCommentSheet({
+    required this.contentType,
+    required this.contentPreview,
+    required this.onSend,
+    required this.onLikeOnly,
   });
 
   @override
+  State<_LikeCommentSheet> createState() => _LikeCommentSheetState();
+}
+
+class _LikeCommentSheetState extends State<_LikeCommentSheet> {
+  final _controller = TextEditingController();
+  bool _hasText = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(() {
+      setState(() => _hasText = _controller.text.trim().isNotEmpty);
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final photoUrl = candidate.photoUrl ??
-        (candidate.photoUrls.isNotEmpty ? candidate.photoUrls.first : null);
-
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.all(24),
-      child: Container(
-        padding: const EdgeInsets.all(32),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFFFF6B9D), Color(0xFFFF8E8E), Color(0xFFFFC371)],
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppTheme.surfaceColor,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: EdgeInsets.fromLTRB(
+        24, 16, 24,
+        MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 36, height: 4,
+              decoration: BoxDecoration(
+                color: AppTheme.dividerColor,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
           ),
-          borderRadius: BorderRadius.circular(28),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.pink.withValues(alpha: 0.4),
-              blurRadius: 30,
-              offset: const Offset(0, 10),
+          const SizedBox(height: 20),
+          const Text(
+            'Add a comment?',
+            style: TextStyle(
+              fontSize: 20, fontWeight: FontWeight.w600,
+              color: AppTheme.textPrimary,
             ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              "It's a Match! 🎉",
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Stand out by telling them why you liked this',
+            style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _controller,
+            maxLines: 3,
+            maxLength: 200,
+            decoration: InputDecoration(
+              hintText: 'Say something nice...',
+              counterStyle: const TextStyle(color: AppTheme.textTertiary),
+              filled: true,
+              fillColor: const Color(0xFFF3F4F6),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'You and ${candidate.displayName} liked each other',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.white.withValues(alpha: 0.9),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Photo
-            ClipRRect(
-              borderRadius: BorderRadius.circular(60),
-              child: photoUrl != null
-                  ? CachedNetworkImage(
-                      imageUrl: photoUrl,
-                      width: 120,
-                      height: 120,
-                      fit: BoxFit.cover,
-                      placeholder: (_, __) => Container(
-                        width: 120, height: 120,
-                        color: Colors.white24,
-                        child: const Icon(Icons.person, size: 60, color: Colors.white),
-                      ),
-                      errorWidget: (_, __, ___) => Container(
-                        width: 120, height: 120,
-                        color: Colors.white24,
-                        child: const Icon(Icons.person, size: 60, color: Colors.white),
-                      ),
-                    )
-                  : Container(
-                      width: 120, height: 120,
-                      color: Colors.white24,
-                      child: const Icon(Icons.person, size: 60, color: Colors.white),
-                    ),
-            ),
-
-            const SizedBox(height: 28),
-
-            // Send Message button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: onSendMessage,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: const Color(0xFFFF6B9D),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
+            autofocus: true,
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: widget.onLikeOnly,
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.favorite_rounded, size: 18, color: AppTheme.primaryColor),
+                      SizedBox(width: 6),
+                      Text('Like only'),
+                    ],
                   ),
                 ),
-                child: const Text(
-                  'Send a Message',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: _hasText ? () => widget.onSend(_controller.text.trim()) : null,
+                  child: const Text('Send with comment'),
                 ),
               ),
-            ),
-
-            const SizedBox(height: 12),
-
-            // Keep Swiping button
-            TextButton(
-              onPressed: onKeepSwiping,
-              child: Text(
-                'Keep Swiping',
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.9),
-                  fontSize: 15,
-                ),
-              ),
-            ),
-          ],
-        ),
+            ],
+          ),
+        ],
       ),
     );
   }
