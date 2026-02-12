@@ -18,6 +18,10 @@ import 'screens/wizard/sms_code_screen.dart';
 import 'screens/wizard/lifestyle_screen.dart';
 import 'screens/wizard/interests_screen.dart';
 import 'screens/wizard/aboutme_screen.dart';
+import 'screens/wizard/location_permission_screen.dart';
+import 'screens/wizard/notification_permission_screen.dart';
+import 'screens/wizard/onboarding_complete_screen.dart';
+
 import 'tinder_like_profile_screen.dart';
 import 'services/api_service.dart';
 import 'config/environment.dart';
@@ -77,6 +81,9 @@ class DatingApp extends StatelessWidget {
         '/onboarding/lifestyle': (context) => const LifestyleScreen(),
         '/onboarding/interests': (context) => const InterestsScreen(),
         '/onboarding/about-me': (context) => const AboutMeScreen(),
+        '/onboarding/location': (context) => const LocationPermissionScreen(),
+        '/onboarding/notifications': (context) => const NotificationPermissionScreen(),
+        '/onboarding/complete': (context) => const OnboardingCompleteScreen(),
         
         // Main app
         '/home': (context) => const MainApp(),
