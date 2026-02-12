@@ -57,14 +57,14 @@ void main() {
         const BorderSide(color: Color(0xFFFF6B6B), width: 2)));
     });
 
-    testWidgets('has progress bar at 55%', (tester) async {
+    testWidgets('has progress bar at 62%', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(home: MatchPreferencesScreen()),
       );
       final progress = tester.widget<LinearProgressIndicator>(
         find.byType(LinearProgressIndicator),
       );
-      expect(progress.value, 0.55);
+      expect(progress.value, 0.62);
     });
 
     testWidgets('has back and close navigation', (tester) async {
