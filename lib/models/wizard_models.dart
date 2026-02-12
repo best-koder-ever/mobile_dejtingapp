@@ -1,5 +1,4 @@
 // Wizard step DTOs matching UserService/DTOs/WizardStep*.cs
-import 'package:flutter/foundation.dart';
 
 enum OnboardingStatus { incomplete, ready, suspended }
 

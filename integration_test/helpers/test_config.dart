@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 
 /// Test configuration with environment-based overrides
 /// Use --dart-define to customize URLs for different environments

@@ -266,8 +266,6 @@ void main() {
       // Wait for initial candidates
       await tester.pumpAndSettle(const Duration(seconds: 5));
 
-      int initialCardCount =
-          find.byType(Card).evaluate().length;
 
       // Swipe through enough profiles to trigger pagination (18+ swipes)
       for (int i = 0; i < 18; i++) {

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:math' as math;
 
 /// Profile Completeness Progress Ring (T154)
 /// A circular progress ring widget showing profile completeness percentage.

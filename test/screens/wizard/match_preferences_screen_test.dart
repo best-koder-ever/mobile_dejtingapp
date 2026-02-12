@@ -50,9 +50,6 @@ void main() {
       final menButton = tester.widget<OutlinedButton>(
         find.ancestor(of: find.text('Men'), matching: find.byType(OutlinedButton)),
       );
-      final everyoneButton = tester.widget<OutlinedButton>(
-        find.ancestor(of: find.text('Everyone'), matching: find.byType(OutlinedButton)),
-      );
       expect(menButton.style?.side?.resolve({}), isNot(
         const BorderSide(color: Color(0xFFFF6B6B), width: 2)));
     });
