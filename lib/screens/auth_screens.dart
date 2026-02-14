@@ -63,6 +63,38 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _loginWithPKCE() async {
+    setState(() => _isLoading = true);
+
+    try {
+      final result = await AuthSessionManager.loginWithPKCE();
+
+      if (!mounted) return;
+
+      if (result.success) {
+        Navigator.pushReplacementNamed(context, '/home');
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.message ?? 'Browser login failed'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Browser login failed. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -230,6 +262,43 @@ class _LoginScreenState extends State<LoginScreen> {
                                         letterSpacing: 0.5,
                                       ),
                                     ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Divider
+                          Row(
+                            children: [
+                              Expanded(child: Divider(color: Colors.white.withAlpha(60))),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                child: Text('or', style: TextStyle(color: Colors.white.withAlpha(120), fontSize: 13)),
+                              ),
+                              Expanded(child: Divider(color: Colors.white.withAlpha(60))),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+
+                          // PKCE login — secure browser-based auth
+                          SizedBox(
+                            width: double.infinity,
+                            height: 52,
+                            child: OutlinedButton.icon(
+                              onPressed: _isLoading ? null : _loginWithPKCE,
+                              icon: const Icon(Icons.lock_outline, size: 20),
+                              label: const Text(
+                                'Sign in with Browser',
+                                style: TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.white,
+                                side: BorderSide(color: Colors.white.withAlpha(100)),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(26),
+                                ),
+                              ),
                             ),
                           ),
                         ],

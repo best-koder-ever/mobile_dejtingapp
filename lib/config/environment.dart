@@ -127,6 +127,8 @@ class EnvironmentSettings {
       Uri.parse('$keycloakIssuer/protocol/openid-connect/userinfo');
   Uri get keycloakLogoutEndpoint =>
       Uri.parse('$keycloakIssuer/protocol/openid-connect/logout');
+  Uri get keycloakAuthEndpoint =>
+      Uri.parse('$keycloakIssuer/protocol/openid-connect/auth');
 
   @override
   String toString() => 'Environment: $name';

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../utils/jwt_utils.dart';
 import 'api_service.dart';
+import 'auth_service_pkce.dart';
 
 class AuthSessionResult {
   final bool success;
@@ -143,4 +144,65 @@ class AuthSessionManager {
     }
     return null;
   }
+
+  /// PKCE Authorization Code login — opens browser, no password in app.
+  static Future<AuthSessionResult> loginWithPKCE() async {
+    try {
+      final tokenResponse = await AuthServicePkce.login();
+      if (tokenResponse == null) {
+        return AuthSessionResult.failure('Login cancelled or failed');
+      }
+
+      final accessToken = tokenResponse['access_token'] as String?;
+      final refreshToken = tokenResponse['refresh_token'] as String?;
+      if (accessToken == null || refreshToken == null) {
+        return AuthSessionResult.failure('Authentication token missing');
+      }
+
+      final idToken = tokenResponse['id_token'] as String?;
+
+      // expires_in may be int or Duration-computed int
+      final dynamic rawExpiresIn = tokenResponse['expires_in'];
+      final int expiresIn;
+      if (rawExpiresIn is int) {
+        expiresIn = rawExpiresIn > 0 ? rawExpiresIn : 300;
+      } else {
+        expiresIn = 300;
+      }
+
+      final accessExpiresAt =
+          DateTime.now().toUtc().add(Duration(seconds: expiresIn));
+
+      final tokenPayload = JwtUtils.decodePayload(accessToken) ?? {};
+      final userInfo = await AuthService.fetchUserInfo(accessToken) ?? {};
+
+      final profile = _normalizeProfile(
+        tokenPayload: tokenPayload,
+        userInfo: userInfo,
+        fallbackUsername: tokenPayload['preferred_username']?.toString() ?? 'user',
+      );
+
+      final userId = (profile['sub'] ??
+              tokenPayload['sub'] ??
+              profile['preferred_username'] ??
+              'unknown')
+          .toString();
+
+      await AppState().login(
+        userId: userId,
+        accessToken: accessToken,
+        accessTokenExpiresAt: accessExpiresAt,
+        refreshToken: refreshToken,
+        idToken: idToken,
+        profile: profile,
+      );
+
+      return AuthSessionResult.ok();
+    } catch (e, stack) {
+      debugPrint('AuthSessionManager.loginWithPKCE failed: $e');
+      debugPrint('$stack');
+      return AuthSessionResult.failure('Login failed. Please try again.');
+    }
+  }
+
 }
